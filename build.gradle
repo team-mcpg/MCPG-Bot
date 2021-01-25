@@ -1,0 +1,25 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version '6.0.0'
+}
+
+mainClassName = 'fr.milekat.MCPG_Discord.Main'
+
+shadowJar{
+    archiveClassifier.set('')
+}
+
+repositories {
+    jcenter()
+}
+
+compileJava.options.encoding = 'UTF-8'
+
+dependencies {
+    testImplementation group: 'junit', name: 'junit', version: '4.12'
+    implementation group: 'net.dv8tion', name:'JDA', version:'4.2.0_227'
+    implementation group: 'redis.clients', name: 'jedis', version: '3.4.0'
+    implementation group: 'com.googlecode.json-simple', name: 'json-simple', version: '1.1'
+    implementation group: 'commons-io', name: 'commons-io', version: '2.6'
+}

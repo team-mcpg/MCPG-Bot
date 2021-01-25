@@ -1,0 +1,19 @@
+{
+  "_title" : "Config file for Discord bot by MileKat",
+  "debug" : false,
+  "bot_token" : "",
+  "bot_game" : "eventmcpg.fr",
+  "sql" : {
+    "SQLPREFIX": "mcpg_",
+    "host": "",
+    "db": "",
+    "user": "",
+    "mdp": ""
+  },
+  "redis" : {
+    "this_channel" : "discord",
+    "debug" : true,
+    "host": "",
+    "auth": ""
+  }
+}
