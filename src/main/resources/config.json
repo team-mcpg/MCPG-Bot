@@ -3,6 +3,17 @@
   "debug" : false,
   "bot_token" : "",
   "bot_game" : "eventmcpg.fr",
+  "id" : {
+    "gStaff" : 0,
+    "gPublic" : 0,
+    "rValide" : 0,
+    "cRegister" : 0,
+    "cCandid" : 0,
+    "regMsg" : 0,
+    "cAccept" : 0,
+    "cDeny" : 0,
+    "cTeamSearch" : 0
+  },
   "sql" : {
     "SQLPREFIX": "mcpg_",
     "host": "",

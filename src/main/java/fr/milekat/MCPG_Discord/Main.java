@@ -1,37 +1,55 @@
 package fr.milekat.MCPG_Discord;
 
+import fr.milekat.MCPG_Discord.classes.Player;
+import fr.milekat.MCPG_Discord.classes.PlayersManager;
+import fr.milekat.MCPG_Discord.classes.Team;
+import fr.milekat.MCPG_Discord.classes.TeamsManager;
 import fr.milekat.MCPG_Discord.core.Init;
 import fr.milekat.MCPG_Discord.utils.DateMilekat;
 import fr.milekat.MCPG_Discord.utils.MariaManage;
 import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.entities.User;
 import org.json.simple.JSONObject;
 import redis.clients.jedis.Jedis;
 
 import java.sql.Connection;
+import java.util.HashMap;
 
 public class Main {
+    /* Core */
     public static boolean debugExeptions = false;
+    private static JSONObject configs;
     /* SQL */
     public static String SQLPREFIX = "BOT_";
+    private static MariaManage mariaManage;
     /* Jedis */
     public static boolean debugJedis = true;
     public static Jedis jedis;
-    /* Core */
-    private static JSONObject configs;
+    /* Discord Bot */
     private static JDA jda;
-    private static MariaManage mariaManage;
+    /* Data */
+    public static HashMap<User, Player> players = new HashMap<>();
+    public static HashMap<Integer, Team> teams = new HashMap<>();
 
+    /**
+     * Main method
+     */
     public static void main(String[] args) throws Exception {
         Init init = new Init();
         configs = init.getConfigs();
         //  Load SQL + Lancement du ping
         mariaManage = init.setSQL();
+        //  Load data from SQL
+        new PlayersManager();
+        new TeamsManager();
         //  Load Jedis + Sub Thread
-        init.getJedis().start();
+        jedis = init.getJedis();
         //  Discord bot load
-
-        // Console load
+        jda = init.getJDA();
+        //  Console load
         init.getConsole().start();
+        //  Log
+        log("Load du bot terminé.");
     }
 
     /**
@@ -62,7 +80,7 @@ public class Main {
     /**
      * SQL Connection to make queries
      */
-    public static Connection getMariaManage() {
+    public static Connection getSql() {
         return mariaManage.getConnection();
     }
 

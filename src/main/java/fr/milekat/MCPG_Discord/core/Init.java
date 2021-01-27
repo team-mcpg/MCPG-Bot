@@ -2,11 +2,16 @@ package fr.milekat.MCPG_Discord.core;
 
 import fr.milekat.MCPG_Discord.Main;
 import fr.milekat.MCPG_Discord.utils.MariaManage;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.JDABuilder;
+import net.dv8tion.jda.api.OnlineStatus;
+import net.dv8tion.jda.api.entities.Activity;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import redis.clients.jedis.Jedis;
 
+import javax.security.auth.login.LoginException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.Connection;
@@ -77,18 +82,18 @@ public class Init {
     /**
      * Connect to Redis server and subscribe to all servers
      */
-    public Thread getJedis() {
+    public Jedis getJedis() {
         JSONObject redisconfig = (JSONObject) Main.getConfig().get("redis");
         Main.debugJedis = (boolean) redisconfig.get("debug");
-        Main.jedis = new Jedis((String) redisconfig.get("host"), 6379, 0);
-        Main.jedis.auth((String) redisconfig.get("auth"));
         Jedis jedis = new Jedis((String) redisconfig.get("host"), 6379, 0);
         jedis.auth((String) redisconfig.get("auth"));
         JedisSub subscriber = new JedisSub();
-        return new Thread("Redis-Discord-Sub") {
+        new Thread("Redis-Discord-Sub") {
             @Override
             public void run() {
                 try {
+                    Jedis jedis = new Jedis((String) redisconfig.get("host"), 6379, 0);
+                    jedis.auth((String) redisconfig.get("auth"));
                     if (Main.debugJedis) Main.log("Load Jedis channels");
                     jedis.subscribe(subscriber, getJedisChannels());
                 } catch (Exception e) {
@@ -97,6 +102,16 @@ public class Init {
                 }
             }
         };
+        return jedis;
+    }
+
+    /**
+     * Connect to the Discord bot and set the watching text
+     */
+    public JDA getJDA() throws LoginException, InterruptedException {
+        JDA api = JDABuilder.createDefault((String) Main.getConfig().get("bot_token")).build().awaitReady();
+        api.getPresence().setPresence(OnlineStatus.ONLINE, Activity.watching((String) Main.getConfig().get("bot_game")));
+        return api;
     }
 
     /**
@@ -104,7 +119,7 @@ public class Init {
      */
     private String[] getJedisChannels() {
         try {
-            Connection connection = Main.getMariaManage();
+            Connection connection = Main.getSql();
             PreparedStatement q = connection.prepareStatement("SELECT * FROM `mcpg_redis_channels`;");
             q.execute();
             ArrayList<String> jedisChannels = new ArrayList<>();
