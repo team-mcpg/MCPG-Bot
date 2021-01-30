@@ -14,6 +14,19 @@
     "cDeny" : 0,
     "cTeamSearch" : 0
   },
+  "messages" : {
+    "_tips" : "Faire un \n pour sauter une ligne !",
+    "data error" : "SQL ERROR CHANGE THIS MESSAGE",
+    "team full" : "TEAM FULL CHANGE THIS MESSAGE",
+    "cant mp" : "@mention Je ne peux pas t’envoyer de MP. Assure-toi de m’autoriser à t’envoyer des messages privés afin de débuter le processus d’inscription ! :wink:",
+    "not approved" : "THE TARGET IS NOT VALID CHANGE THIS MESSAGE",
+    "request_sent_confirm" : ":white_check_mark: **Invitation envoyée**\n\nTu as bien invité <pseudo> à rejoindre ton équipe. Il doit accepter ta demande pour l’intégrer.",
+    "request_sent_ask" : ":tickets: **Invitation reçue**\n\n<pseudo> t’a invité à rejoindre son équipe.\n:warning: Si tu acceptes l’invitation, cette action est irréversible et tu ne pourras plus jouer en solo, ni changer d’équipe.\n\nAcceptes-tu l’invitation de <pseudo> ?",
+    "request_reply_confirm" : ":people_holding_hands: **Equipe**\n\nTu as bien rejoint l’équipe <nom_équipe>.",
+    "request_reply_validation" : ":white_check_mark : **Invitation acceptée**\n\n<pseudo> a bien accepté l’invitation à rejoindre ton équipe.",
+    "request_reply_deny" : ":x: **Invitation refusée**\n\n<pseudo> a refusé l’invitation que tu lui as envoyée.",
+    "team growth" : ":people_holding_hands: **Equipe**\n\nTon équipe a bien été créée. Le nom actuel de ton équipe est : **<nom_ équipe>**.\nSi tu souhaite le modifier, utilise la commande : /teamname <nouveau_nom>, dans mon privé."
+  },
   "sql" : {
     "SQLPREFIX": "mcpg_",
     "host": "",

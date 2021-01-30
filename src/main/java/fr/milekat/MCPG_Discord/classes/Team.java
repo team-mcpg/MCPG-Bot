@@ -5,12 +5,14 @@ import java.util.ArrayList;
 public class Team {
     private final int id;
     private final String name;
+    private final long chief;
     private final int money;
-    private ArrayList<String> members;
+    private ArrayList<Player> members;
 
-    public Team(int id, String name, int money, ArrayList<String> members) {
+    public Team(int id, String name, long chief, int money, ArrayList<Player> members) {
         this.id = id;
         this.name = name;
+        this.chief = chief;
         this.money = money;
         this.members = members;
     }
@@ -23,23 +25,27 @@ public class Team {
         return name;
     }
 
+    public long getChief() {
+        return chief;
+    }
+
     public int getMoney() {
         return money;
     }
 
-    public ArrayList<String> getMembers() {
+    public ArrayList<Player> getMembers() {
         return members;
     }
 
-    public void addMembers(String member) {
+    public void addMembers(Player member) {
         this.members.add(member);
     }
 
-    public void removeMembers(String member) {
+    public void removeMembers(Player member) {
         this.members.remove(member);
     }
 
-    public void setMembers(ArrayList<String> members) {
+    public void setMembers(ArrayList<Player> members) {
         this.members = members;
     }
 

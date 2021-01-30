@@ -1,7 +1,5 @@
 package fr.milekat.MCPG_Discord.classes;
 
-import net.dv8tion.jda.api.entities.User;
-
 import java.util.UUID;
 
 public class Player {
@@ -11,7 +9,7 @@ public class Player {
     private final String prefix;
     //  Minecraft UUID
     private UUID uuid;
-    private final User discord_id;
+    private final long discord_id;
     //  Register step
     private int step;
     //  Team ID
@@ -24,7 +22,7 @@ public class Player {
     /**
      * For new user
      */
-    public Player(User discord_id, int step) {
+    public Player(long discord_id, int step) {
         this.prefix = null;
         this.discord_id = discord_id;
         this.step = step;
@@ -33,7 +31,7 @@ public class Player {
     /**
      * For users from SQL
      */
-    public Player(String username, String prefix, UUID uuid, User discord_id, int step, int team, String muted, String banned, String reason) {
+    public Player(String username, String prefix, UUID uuid, long discord_id, int step, int team, String muted, String banned, String reason) {
         this.username = username;
         this.prefix = prefix;
         this.uuid = uuid;
@@ -65,7 +63,7 @@ public class Player {
         this.uuid = uuid;
     }
 
-    public User getDiscord_id() {
+    public long getDiscord_id() {
         return discord_id;
     }
 

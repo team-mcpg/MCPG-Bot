@@ -1,19 +1,13 @@
 package fr.milekat.MCPG_Discord;
 
-import fr.milekat.MCPG_Discord.classes.Player;
-import fr.milekat.MCPG_Discord.classes.PlayersManager;
-import fr.milekat.MCPG_Discord.classes.Team;
-import fr.milekat.MCPG_Discord.classes.TeamsManager;
 import fr.milekat.MCPG_Discord.core.Init;
 import fr.milekat.MCPG_Discord.utils.DateMilekat;
 import fr.milekat.MCPG_Discord.utils.MariaManage;
 import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.entities.User;
 import org.json.simple.JSONObject;
 import redis.clients.jedis.Jedis;
 
 import java.sql.Connection;
-import java.util.HashMap;
 
 public class Main {
     /* Core */
@@ -27,9 +21,6 @@ public class Main {
     public static Jedis jedis;
     /* Discord Bot */
     private static JDA jda;
-    /* Data */
-    public static HashMap<User, Player> players = new HashMap<>();
-    public static HashMap<Integer, Team> teams = new HashMap<>();
 
     /**
      * Main method
@@ -39,9 +30,6 @@ public class Main {
         configs = init.getConfigs();
         //  Load SQL + Lancement du ping
         mariaManage = init.setSQL();
-        //  Load data from SQL
-        new PlayersManager();
-        new TeamsManager();
         //  Load Jedis + Sub Thread
         jedis = init.getJedis();
         //  Discord bot load

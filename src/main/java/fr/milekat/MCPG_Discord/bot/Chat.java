@@ -6,11 +6,15 @@ import org.json.simple.JSONObject;
 
 public class Chat extends ListenerAdapter {
     /* Main */
+    private final BotManager manager;
     private final JDA api;
     private final JSONObject id;
+    private final JSONObject msg;
 
-    public Chat(JDA api, JSONObject id) {
+    public Chat(BotManager manager, JDA api, JSONObject id, JSONObject msg) {
+        this.manager = manager;
         this.api = api;
         this.id = id;
+        this.msg = msg;
     }
 }
