@@ -1,5 +1,7 @@
 package fr.milekat.MCPG_Discord.classes;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 public class Player {
@@ -11,7 +13,8 @@ public class Player {
     private UUID uuid;
     private final long discord_id;
     //  Register step
-    private int step;
+    private String step;
+    private HashMap<String, String> register;
     //  Team ID
     private int team;
     /* Bans / Mutes */
@@ -22,7 +25,7 @@ public class Player {
     /**
      * For new user
      */
-    public Player(long discord_id, int step) {
+    public Player(long discord_id, String step) {
         this.prefix = null;
         this.discord_id = discord_id;
         this.step = step;
@@ -31,12 +34,17 @@ public class Player {
     /**
      * For users from SQL
      */
-    public Player(String username, String prefix, UUID uuid, long discord_id, int step, int team, String muted, String banned, String reason) {
+    public Player(String username, String prefix, UUID uuid, long discord_id, String step, String register , int team, String muted, String banned, String reason) {
         this.username = username;
         this.prefix = prefix;
         this.uuid = uuid;
         this.discord_id = discord_id;
         this.step = step;
+        HashMap<String, String> mapRegister = new HashMap<>();
+        for (String loop : register.split("||")) {
+            mapRegister.put(loop.split("|")[0],loop.split("|")[1]);
+        }
+        this.register = mapRegister;
         this.team = team;
         this.muted = muted;
         this.banned = banned;
@@ -67,12 +75,28 @@ public class Player {
         return discord_id;
     }
 
-    public int getStep() {
+    public String getStep() {
         return step;
     }
 
-    public void setStep(int step) {
+    public void setStep(String step) {
         this.step = step;
+    }
+
+    public HashMap<String, String> getRegister() {
+        return register;
+    }
+
+    public String getStringRegister() {
+        StringBuilder sRegister = new StringBuilder();
+        for (Map.Entry<String, String> loop : register.entrySet()) {
+            sRegister.append(loop.getKey()).append("|").append(loop.getValue()).append("||");
+        }
+        return sRegister.toString();
+    }
+
+    public void setRegister(HashMap<String, String> register) {
+        this.register = register;
     }
 
     public int getTeam() {

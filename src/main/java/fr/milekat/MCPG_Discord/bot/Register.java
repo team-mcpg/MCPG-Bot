@@ -1,10 +1,9 @@
 package fr.milekat.MCPG_Discord.bot;
 
 import fr.milekat.MCPG_Discord.Main;
-import fr.milekat.MCPG_Discord.classes.Player;
-import fr.milekat.MCPG_Discord.classes.PlayersManager;
-import fr.milekat.MCPG_Discord.classes.Team;
-import fr.milekat.MCPG_Discord.classes.TeamsManager;
+import fr.milekat.MCPG_Discord.classes.*;
+import fr.milekat.MCPG_Discord.utils.MojangNames;
+import fr.milekat.MCPG_Discord.utils.Numbers;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.*;
@@ -16,6 +15,8 @@ import org.json.simple.JSONObject;
 
 import java.awt.*;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.UUID;
 
 public class Register extends ListenerAdapter {
     /* Main */
@@ -47,7 +48,6 @@ public class Register extends ListenerAdapter {
         this.rValide = api.getRoleById((String) id.get("rValide"));
         this.cRegister = api.getTextChannelById((String) id.get("cRegister"));
         this.cCandid = api.getTextChannelById((String) id.get("cCandid"));
-        if (cCandid != null) cCandid.retrieveMessageById((long) id.get("regMsg")).queue(message -> this.regMsg = message);
         this.cAccept = api.getTextChannelById((String) id.get("cAccept"));
         this.cDeny = api.getTextChannelById((String) id.get("cDeny"));
         this.cTeamSearch = api.getTextChannelById((String) id.get("cTeamSearch"));
@@ -58,13 +58,19 @@ public class Register extends ListenerAdapter {
         if (event.getChannel().getType().equals(ChannelType.TEXT) && event.getMember() != null) {
             if (event.getTextChannel().equals(cTeamSearch)) {
                 if (event.getMessage().getContentRaw().contains("/invite ") && event.getMessage().getMentionedMembers().size() != 0) {
-                    requestSend(event);
+                    teamInvite(event);
                     event.getMessage().delete().queue();
                 }
             }
         } else if (event.getChannel().getType().equals(ChannelType.PRIVATE)) {
-            // TODO: 30/01/2021  Commade /teamname <NewName>
-            // TODO: 30/01/2021  Messages pour la candidature si step = X
+            try {
+                Player player = PlayersManager.getPlayer(event.getAuthor().getIdLong());
+                if (player.getDiscord_id() != event.getAuthor().getIdLong()) return;
+                registerReceive(event.getMessage(), event.getAuthor(), event.getPrivateChannel(), null);
+            } catch (SQLException throwables) {
+                manager.sendPrivate(event.getAuthor(), (String) msg.get("data error"));
+                if (Main.debugExeptions) throwables.printStackTrace();
+            }
         }
     }
 
@@ -73,26 +79,20 @@ public class Register extends ListenerAdapter {
         event.retrieveMessage().queue(message -> {
             if (event.getChannel().getType().equals(ChannelType.TEXT) && event.getMember() != null) {
                 if (event.getTextChannel().equals(cRegister)) {
-                    if (event.getReactionEmote().getName().equalsIgnoreCase(":white_check_mark:")) {
-                        startCandid(event);
+                    if (event.getReactionEmote().getEmoji().equalsIgnoreCase("✅")) {
+                        manager.sendPrivate(event.getUser(), (String) msg.get("register_start"));
+                        registerInit(event);
                     }
                 } else if (event.getTextChannel().equals(cCandid)) {
-                    // TODO: 30/01/2021  Réaction sur regMsg, pour lancer le processus de candidature
+                    // TODO: 30/01/2021 Réaction sur regMsg, pour lancer le processus de candidature
                 } else if (event.getTextChannel().equals(cAccept)) {
-                    // TODO: 30/01/2021  Candidature acceptée par le staff
+                    // TODO: 30/01/2021 Candidature acceptée par le staff
                 } else if (event.getTextChannel().equals(cDeny)) {
-                    // TODO: 30/01/2021  Candidature refusée par le staff
+                    // TODO: 30/01/2021 Candidature refusée par le staff
                 }
-            } else if (event.getChannel().getType().equals(ChannelType.PRIVATE)) {
-                if (!message.getAuthor().isBot() || message.getEmbeds().size() != 1) return;
-                if (event.getReactionEmote().getEmoji().equalsIgnoreCase("✅")) {
-                    requestValidation(event, message);
-                } else if (event.getReactionEmote().getEmoji().equalsIgnoreCase("❌")) {
-                    //  User deny request, inform request sender
-                    manager.sendPrivate(api.getUserById(message.getEmbeds().get(0).getFooter().getText()),
-                            BotManager.msgUsername(gPublic.getMember(event.getUser()), (String) msg.get("request_reply_deny")));
-                }
-                message.delete().queue();
+            } else if (event.getChannel().getType().equals(ChannelType.PRIVATE) &&
+                    message.getAuthor().isBot() && message.getEmbeds().size() == 1) {
+                registerReceive(message, event.getUser(), event.getPrivateChannel(), event.getReactionEmote().getEmoji());
             }
         });
     }
@@ -100,14 +100,160 @@ public class Register extends ListenerAdapter {
     /**
      * Call when a member accept rules
      */
-    private void startCandid(MessageReactionAddEvent event) {
-        // TODO: 30/01/2021 procéssus de candidature
+    private void registerInit(MessageReactionAddEvent event) {
+        try {
+            PlayersManager.createPlayer(event.getUserIdLong());
+            manager.sendPrivate(event.getUser(), (String) msg.get("register_1"));
+        } catch (SQLException throwables) {
+            manager.sendPrivate(event.getUser(), (String) msg.get("data error"));
+            if (Main.debugExeptions) throwables.printStackTrace();
+        }
+    }
+
+    /**
+     * Execute actions for the current step of user
+     */
+    private void registerReceive(Message message, User user, PrivateChannel channel, String emoji) {
+        try {
+            Player player = PlayersManager.getPlayer(user.getIdLong());
+            if (BotManager.steps.containsKey(player.getStep())) return;
+            Step step = BotManager.steps.get(player.getStep());
+            switch (step.getType()) {
+                case "TEXT": {
+                    if (step.getMin() < message.getContentRaw().length() && step.getMax() > message.getContentRaw().length()) {
+                        if (step.getName().equals("username")) { //  Username exception
+                            player.setUsername(message.getContentRaw());
+                            player.setUuid(UUID.fromString(MojangNames.getUuid(message.getContentRaw())));
+                        }
+                        player.setStep(step.getNext());
+                        if (step.isSave()) {
+                            HashMap<String, String> register = player.getRegister();
+                            register.put(step.getName(), message.getContentRaw().replaceAll("|", ""));
+                            player.setRegister(register);
+                        }
+                        PlayersManager.updatePlayer(player);
+                    }
+                    break;
+                }
+                case "VALID": {
+                    if (emoji.equalsIgnoreCase("✅")) {
+                        manager.sendPrivate(user, step.getYes());
+                        player.setStep(step.getNext());
+                        if (step.isSave()) {
+                            HashMap<String, String> register = player.getRegister();
+                            register.put(step.getName(), "yes");
+                            player.setRegister(register);
+                        }
+                        PlayersManager.updatePlayer(player);
+                    } else if (emoji.equalsIgnoreCase("❌")) {
+                        manager.sendPrivate(user, step.getNo());
+                        player.setStep(step.getBack());
+                        PlayersManager.updatePlayer(player);
+                    }
+                    break;
+                }
+                case "CHOICES": {
+                    String choice = step.getChoices().get(Numbers.getInt(emoji));
+                    if (choice==null) break;
+                    player.setStep(step.getNext());
+                    if (step.isSave()) {
+                        HashMap<String, String> register = player.getRegister();
+                        register.put(step.getName(), choice);
+                        player.setRegister(register);
+                    }
+                    PlayersManager.updatePlayer(player);
+                    break;
+                }
+                case "END": {
+                    if (!message.getEmbeds().get(0).getColor().equals(Color.green)) return;
+                    if (emoji.equalsIgnoreCase("✅")) {
+                        teamAccept(user, message);
+                    } else if (emoji.equalsIgnoreCase("❌")) {
+                        //  User deny request, inform request sender
+                        manager.sendPrivate(api.getUserById(message.getEmbeds().get(0).getFooter().getText()),
+                                BotManager.msgUsername(gPublic.getMember(user), (String) msg.get("request_reply_deny")));
+                    }
+                    message.delete().queue();
+                }
+            }
+            registerSend(player, user, channel);
+        } catch (SQLException throwables) {
+            if (Main.debugExeptions) throwables.printStackTrace();
+        }
+    }
+
+    /**
+     * Send the new step message to user in channel
+     */
+    private void registerSend(Player player, User user, PrivateChannel channel) {
+        if (BotManager.steps.containsKey(player.getStep())) return;
+        Step step = BotManager.steps.get(player.getStep());
+        switch (step.getType()) {
+            case "TEXT": {
+                manager.sendEmbed(channel, getTEXTEmbed(step).build());
+                break;
+            }
+            case "VALID": {
+                manager.sendEmbed(channel, //   Skin exception
+                        (step.getName().equals("skin") ? getSKINEmbed(player, step).build() : getVALIDEmbed(step).build()));
+                break;
+            }
+            case "CHOICES": {
+                manager.sendEmbed(channel, getCHOICESEmbed(step).build());
+                break;
+            }
+        }
+    }
+
+    /**
+     * Get an embed for a TEXT step
+     */
+    private EmbedBuilder getTEXTEmbed(Step step) {
+        EmbedBuilder builder = new EmbedBuilder();
+        builder.setColor(Color.BLUE).setDescription(step.getMessage())
+                .addField("Min chars", String.valueOf(step.getMin()), true)
+                .addField("Max chars", String.valueOf(step.getMax()), true);
+        return builder;
+    }
+
+    /**
+     * Get an embed for a VALID step
+     */
+    private EmbedBuilder getVALIDEmbed(Step step) {
+        EmbedBuilder builder = new EmbedBuilder();
+        builder.setColor(Color.BLUE).setDescription(step.getMessage());
+        return builder;
+    }
+
+    /**
+     * Get an embed for a CHOICES step
+     */
+    private EmbedBuilder getCHOICESEmbed(Step step) {
+        EmbedBuilder builder = new EmbedBuilder();
+        builder.setColor(Color.BLUE).setDescription(step.getMessage());
+        int loop = 1;
+        for (String choice : step.getChoices()) {
+            builder.addField(Numbers.getString(loop), choice, true);
+            if (loop==9) break;
+            loop++;
+        }
+        return builder;
+    }
+
+    /**
+     * Get an embed with skin of player
+     */
+    private EmbedBuilder getSKINEmbed(Player player, Step step) {
+        EmbedBuilder builder = new EmbedBuilder();
+        builder.setColor(Color.BLUE).setDescription(step.getMessage())
+                .setImage("https://crafatar.com/renders/body/" + player.getUuid().toString() + "?size=512&overlay&default=MHF_Alex");
+        return builder;
     }
 
     /**
      * Invite a user to the team of player
      */
-    private void requestSend(MessageReceivedEvent event) {
+    private void teamInvite(MessageReceivedEvent event) {
         //  Init vars
         Team senderTeam;
         Player sender;
@@ -128,7 +274,7 @@ public class Register extends ListenerAdapter {
             return;
         }
         //  If targed is valid
-        if (pTarget.getStep() <= 5) {
+        if (!pTarget.getStep().equalsIgnoreCase("END")) {
             manager.sendPrivate(event.getAuthor(), (String) msg.get("not approved"));
             return;
         }
@@ -145,14 +291,13 @@ public class Register extends ListenerAdapter {
     /**
      * Check the validation state, then make player join the team
      */
-    private void requestValidation(MessageReactionAddEvent event, Message message) {
-        User uTarget = event.getUser();
+    private void teamAccept(User uTarget, Message message) {
         try {
             //  Init vars
             Team team = TeamsManager.getPlayerTeam(message.getEmbeds().get(0).getFooter().getText());
-            Player pTarget = PlayersManager.getPlayer(event.getUserIdLong());
-            User uSender = api.getUserById(team.getChief());
+            Player pTarget = PlayersManager.getPlayer(uTarget.getIdLong());
             Member mTarget = gPublic.getMember(uTarget);
+            User uSender = api.getUserById(team.getChief());
             //  Max team size, cancel action
             if (team.getSize() >= 6) {
                 manager.sendPrivate(uTarget, (String) msg.get("team full"));

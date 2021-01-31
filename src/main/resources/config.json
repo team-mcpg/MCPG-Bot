@@ -9,7 +9,6 @@
     "rValide" : 0,
     "cRegister" : 0,
     "cCandid" : 0,
-    "regMsg" : 0,
     "cAccept" : 0,
     "cDeny" : 0,
     "cTeamSearch" : 0
@@ -18,14 +17,75 @@
     "_tips" : "Faire un \n pour sauter une ligne !",
     "data error" : "SQL ERROR CHANGE THIS MESSAGE",
     "team full" : "TEAM FULL CHANGE THIS MESSAGE",
-    "cant mp" : "@mention Je ne peux pas t’envoyer de MP. Assure-toi de m’autoriser à t’envoyer des messages privés afin de débuter le processus d’inscription ! :wink:",
+    "cant mp" : "@mention Je ne peux pas t’envoyer de MP. Assure-toi de m’autoriser à t’envoyer des messages privés ! :wink:",
     "not approved" : "THE TARGET IS NOT VALID CHANGE THIS MESSAGE",
     "request_sent_confirm" : ":white_check_mark: **Invitation envoyée**\n\nTu as bien invité <pseudo> à rejoindre ton équipe. Il doit accepter ta demande pour l’intégrer.",
     "request_sent_ask" : ":tickets: **Invitation reçue**\n\n<pseudo> t’a invité à rejoindre son équipe.\n:warning: Si tu acceptes l’invitation, cette action est irréversible et tu ne pourras plus jouer en solo, ni changer d’équipe.\n\nAcceptes-tu l’invitation de <pseudo> ?",
     "request_reply_confirm" : ":people_holding_hands: **Equipe**\n\nTu as bien rejoint l’équipe <nom_équipe>.",
     "request_reply_validation" : ":white_check_mark : **Invitation acceptée**\n\n<pseudo> a bien accepté l’invitation à rejoindre ton équipe.",
     "request_reply_deny" : ":x: **Invitation refusée**\n\n<pseudo> a refusé l’invitation que tu lui as envoyée.",
-    "team growth" : ":people_holding_hands: **Equipe**\n\nTon équipe a bien été créée. Le nom actuel de ton équipe est : **<nom_ équipe>**.\nSi tu souhaite le modifier, utilise la commande : /teamname <nouveau_nom>, dans mon privé."
+    "team growth" : ":people_holding_hands: **Equipe**\n\nTon équipe a bien été créée. Le nom actuel de ton équipe est : **<nom_ équipe>**.\nSi tu souhaite le modifier, utilise la commande : /teamname <nouveau_nom>, dans mon privé.",
+    "register_steps" : {
+      "_example" : {
+        "_id" : "id of step (1,2,3,etc..)",
+        "type" : "!mandatory: TEXT, VALID, CHOICES",
+        "message" : "!mandatory: Answer",
+        "min_chars" : 10,
+        "max_chars" : 500,
+        "yes" : "VALID ONLY: Message if ✅",
+        "no" : "VALID ONLY: Message if ❌",
+        "return_step" : "VALID ONLY: if no, step to return (Can be the same) (put the name of the desired step)",
+        "choices" : ["CHOICES ONLY", "choice_1", "choice_2", "choice_3", "etc...", "9 choices maximum"],
+        "next" : "!mandatory: next step (Can't be the same) (put the name of the desired step), if last step: END",
+        "save" : "true / false, if you want see this step in Staff Embed"
+      },
+      "init" : {
+        "_info" : "This is not a step, this is the beginning of the form",
+        "type" : "INIT",
+        "message" : "Bonjour <pseudo> ! :wave:\nMerci de t’intéresser à la <nom_cité>. Nous allons débuter ton inscription qui sera soumise à validation auprès de notre Staff.",
+        "next" : "username",
+        "save" : false
+      },
+      "username" : {
+        "type" : "TEXT",
+        "message" : "Quel est ton pseudo minecraft exact (Respecter majuscules svp)",
+        "min_chars" : 1,
+        "max_chars" : 16,
+        "next" : "skin",
+        "save" : true
+      },
+      "skin" : {
+        "type" : "VALID",
+        "message" : "Est-ce bien toi ?",
+        "yes" : "Super !",
+        "no" : "D'accord, nous allons donc recommencer.",
+        "return_step" : "init",
+        "next" : "player_type",
+        "save" : false
+      },
+      "player_type" : {
+        "type" : "CHOICES",
+        "message" : "Quel type de joueur es-tu ?",
+        "choices" : ["Farm", "TryHard les $$s", "PVP", "FUN", "Visiteur", "Foutre la merde"],
+        "next" : "motivation",
+        "save" : true
+      },
+      "motivation" : {
+        "type" : "TEXT",
+        "message" : "Quelles sont tes motivations ? (txt libre min 20 mots)",
+        "min_chars" : 100,
+        "max_chars" : 500,
+        "next" : "colour",
+        "save" : true
+      },
+      "colour" : {
+        "type" : "CHOICES",
+        "message" : "Ta couleur préférée ?",
+        "choices" : ["rouge", "vert", "jaune"],
+        "next" : "END",
+        "save" : true
+      }
+    }
   },
   "sql" : {
     "SQLPREFIX": "mcpg_",
