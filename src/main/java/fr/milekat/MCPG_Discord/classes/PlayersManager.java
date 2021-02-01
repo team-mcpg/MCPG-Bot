@@ -56,9 +56,10 @@ public class PlayersManager {
     /**
      * Create a new player
      */
-    public static void createPlayer(long discord_id) throws SQLException {
+    public static Player createPlayer(long discord_id) throws SQLException {
         Player player = new Player(discord_id, "init");
         updatePlayer(player);
+        return player;
     }
 
     /**

@@ -11,7 +11,8 @@
     "cCandid" : 0,
     "cAccept" : 0,
     "cDeny" : 0,
-    "cTeamSearch" : 0
+    "cTeamSearch" : 0,
+    "rValidation" : 0
   },
   "messages" : {
     "_tips" : "Faire un \n pour sauter une ligne !",
@@ -28,6 +29,7 @@
     "register_steps" : {
       "_example" : {
         "_id" : "id of step (1,2,3,etc..)",
+        "name" : "_exemple",
         "type" : "!mandatory: TEXT, VALID, CHOICES",
         "message" : "!mandatory: Answer",
         "min_chars" : 10,
@@ -41,12 +43,14 @@
       },
       "init" : {
         "_info" : "This is not a step, this is the beginning of the form",
+        "name" : "init",
         "type" : "INIT",
         "message" : "Bonjour <pseudo> ! :wave:\nMerci de t’intéresser à la <nom_cité>. Nous allons débuter ton inscription qui sera soumise à validation auprès de notre Staff.",
         "next" : "username",
         "save" : false
       },
       "username" : {
+        "name" : "username",
         "type" : "TEXT",
         "message" : "Quel est ton pseudo minecraft exact (Respecter majuscules svp)",
         "min_chars" : 1,
@@ -55,6 +59,7 @@
         "save" : true
       },
       "skin" : {
+        "name" : "skin",
         "type" : "VALID",
         "message" : "Est-ce bien toi ?",
         "yes" : "Super !",
@@ -64,6 +69,7 @@
         "save" : false
       },
       "player_type" : {
+        "name" : "player_type",
         "type" : "CHOICES",
         "message" : "Quel type de joueur es-tu ?",
         "choices" : ["Farm", "TryHard les $$s", "PVP", "FUN", "Visiteur", "Foutre la merde"],
@@ -71,6 +77,7 @@
         "save" : true
       },
       "motivation" : {
+        "name" : "motivation",
         "type" : "TEXT",
         "message" : "Quelles sont tes motivations ? (txt libre min 20 mots)",
         "min_chars" : 100,
@@ -79,13 +86,24 @@
         "save" : true
       },
       "colour" : {
+        "name" : "colour",
         "type" : "CHOICES",
         "message" : "Ta couleur préférée ?",
         "choices" : ["rouge", "vert", "jaune"],
-        "next" : "END",
+        "next" : "end",
         "save" : true
+      },
+      "end" : {
+        "name" : "end",
+        "type" : "END",
+        "message" : "Valides-tu ta candidature ?",
+        "yes" : "Merci <pseudo> ! :thumbups:\nTon inscription a bien été enregistrée. Tu recevras un autre message lorsque celle-ci aura été traitée, pour t’indiquer si elle est acceptée ou refusée.",
+        "no" : "Très bien, alors je recommence !",
+        "return_step" : "init"
       }
-    }
+    },
+    "register_staff_message" : "Nouvelle candidature reçue.",
+    "register_refused_waitmsg" : ":x: **Candidature refusée**\n\nDésolé <pseudo>, ta candidature à la <nom_cité> a été refusée. Si toutefois tu es réellement motivé pour participer à cette cité et que tu souhaites revoir ta candidature, tu peux la renouveler dans 24 heures."
   },
   "sql" : {
     "SQLPREFIX": "mcpg_",

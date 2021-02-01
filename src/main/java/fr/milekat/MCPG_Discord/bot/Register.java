@@ -16,6 +16,7 @@ import org.json.simple.JSONObject;
 import java.awt.*;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 public class Register extends ListenerAdapter {
@@ -63,36 +64,25 @@ public class Register extends ListenerAdapter {
                 }
             }
         } else if (event.getChannel().getType().equals(ChannelType.PRIVATE)) {
-            try {
-                Player player = PlayersManager.getPlayer(event.getAuthor().getIdLong());
-                if (player.getDiscord_id() != event.getAuthor().getIdLong()) return;
-                registerReceive(event.getMessage(), event.getAuthor(), event.getPrivateChannel(), null);
-            } catch (SQLException throwables) {
-                manager.sendPrivate(event.getAuthor(), (String) msg.get("data error"));
-                if (Main.debugExeptions) throwables.printStackTrace();
-            }
+            privateReceive(event.getMessage(), event.getAuthor(), event.getPrivateChannel(), null);
         }
     }
 
     @Override
     public void onMessageReactionAdd(@NotNull MessageReactionAddEvent event) {
         event.retrieveMessage().queue(message -> {
-            if (event.getChannel().getType().equals(ChannelType.TEXT) && event.getMember() != null) {
+            if (event.getChannel().getType().equals(ChannelType.TEXT) && event.getUser() != null) {
                 if (event.getTextChannel().equals(cRegister)) {
                     if (event.getReactionEmote().getEmoji().equalsIgnoreCase("✅")) {
                         manager.sendPrivate(event.getUser(), (String) msg.get("register_start"));
-                        registerInit(event);
+                        formStart(event.getUser());
                     }
                 } else if (event.getTextChannel().equals(cCandid)) {
-                    // TODO: 30/01/2021 Réaction sur regMsg, pour lancer le processus de candidature
-                } else if (event.getTextChannel().equals(cAccept)) {
-                    // TODO: 30/01/2021 Candidature acceptée par le staff
-                } else if (event.getTextChannel().equals(cDeny)) {
-                    // TODO: 30/01/2021 Candidature refusée par le staff
+                    // TODO: 30/01/2021 Réaction sur candidature, vote du staff
                 }
-            } else if (event.getChannel().getType().equals(ChannelType.PRIVATE) &&
+            } else if (event.getChannel().getType().equals(ChannelType.PRIVATE) && event.getUser() != null &&
                     message.getAuthor().isBot() && message.getEmbeds().size() == 1) {
-                registerReceive(message, event.getUser(), event.getPrivateChannel(), event.getReactionEmote().getEmoji());
+                privateReceive(message, event.getUser(), event.getPrivateChannel(), event.getReactionEmote().getName());
             }
         });
     }
@@ -100,12 +90,16 @@ public class Register extends ListenerAdapter {
     /**
      * Call when a member accept rules
      */
-    private void registerInit(MessageReactionAddEvent event) {
+    private void formStart(User user) {
         try {
-            PlayersManager.createPlayer(event.getUserIdLong());
-            manager.sendPrivate(event.getUser(), (String) msg.get("register_1"));
+            Player player = PlayersManager.createPlayer(user.getIdLong());
+            Step step = BotManager.steps.get(player.getStep());
+            manager.sendPrivate(user, step.getMessage());
+            player.setStep(step.getNext());
+            PlayersManager.updatePlayer(player);
+            user.openPrivateChannel().queue(channel -> privateSend(player, channel));
         } catch (SQLException throwables) {
-            manager.sendPrivate(event.getUser(), (String) msg.get("data error"));
+            manager.sendPrivate(user, (String) msg.get("data error"));
             if (Main.debugExeptions) throwables.printStackTrace();
         }
     }
@@ -113,70 +107,85 @@ public class Register extends ListenerAdapter {
     /**
      * Execute actions for the current step of user
      */
-    private void registerReceive(Message message, User user, PrivateChannel channel, String emoji) {
+    private void privateReceive(Message message, User user, PrivateChannel channel, String emoji) {
         try {
             Player player = PlayersManager.getPlayer(user.getIdLong());
-            if (BotManager.steps.containsKey(player.getStep())) return;
-            Step step = BotManager.steps.get(player.getStep());
-            switch (step.getType()) {
-                case "TEXT": {
-                    if (step.getMin() < message.getContentRaw().length() && step.getMax() > message.getContentRaw().length()) {
-                        if (step.getName().equals("username")) { //  Username exception
-                            player.setUsername(message.getContentRaw());
-                            player.setUuid(UUID.fromString(MojangNames.getUuid(message.getContentRaw())));
+            if (player.getDiscord_id() != user.getIdLong()) return;
+            if (BotManager.steps.containsKey(player.getStep())) {
+                //  Player is in form register
+                Step step = BotManager.steps.get(player.getStep());
+                switch (step.getType()) {
+                    case "TEXT": {
+                        if (step.getMin() < message.getContentRaw().length() && step.getMax() > message.getContentRaw().length()) {
+                            if (step.getName().equals("username")) { //  Username exception
+                                player.setUsername(message.getContentRaw());
+                                player.setUuid(UUID.fromString(MojangNames.getUuid(message.getContentRaw())));
+                            }
+                            player.setStep(step.getNext());
+                            if (step.isSave()) {
+                                HashMap<String, String> register = player.getRegister();
+                                register.put(step.getName(), message.getContentRaw().replaceAll("\\|", ""));
+                                player.setRegister(register);
+                            }
                         }
+                        break;
+                    }
+                    case "VALID": {
+                        if (emoji.equalsIgnoreCase("✅")) {
+                            manager.sendPrivate(user, step.getYes());
+                            player.setStep(step.getNext());
+                            if (step.isSave()) {
+                                HashMap<String, String> register = player.getRegister();
+                                register.put(step.getName(), "yes");
+                                player.setRegister(register);
+                            }
+                        } else if (emoji.equalsIgnoreCase("❌")) {
+                            manager.sendPrivate(user, step.getNo());
+                            player.setStep(step.getBack());
+                        }
+                        break;
+                    }
+                    case "CHOICES": {
+                        String choice = step.getChoices().get(Numbers.getInt(emoji));
+                        if (choice == null) break;
                         player.setStep(step.getNext());
                         if (step.isSave()) {
                             HashMap<String, String> register = player.getRegister();
-                            register.put(step.getName(), message.getContentRaw().replaceAll("|", ""));
+                            register.put(step.getName(), choice);
                             player.setRegister(register);
                         }
-                        PlayersManager.updatePlayer(player);
+                        break;
                     }
-                    break;
-                }
-                case "VALID": {
-                    if (emoji.equalsIgnoreCase("✅")) {
-                        manager.sendPrivate(user, step.getYes());
-                        player.setStep(step.getNext());
-                        if (step.isSave()) {
-                            HashMap<String, String> register = player.getRegister();
-                            register.put(step.getName(), "yes");
-                            player.setRegister(register);
+                    case "END": {
+                        if (emoji.equalsIgnoreCase("✅")) {
+                            manager.sendEmbed(cCandid, getFINALEmbed(player).build());
+                            manager.sendPrivate(user, step.getYes());
+                            player.setStep("WAITING");
+                            PlayersManager.updatePlayer(player);
+                            return; //  End of from !
+                        } else if (emoji.equalsIgnoreCase("❌")) {
+                            manager.sendPrivate(user, step.getNo());
+                            player.setStep(step.getBack());
                         }
-                        PlayersManager.updatePlayer(player);
-                    } else if (emoji.equalsIgnoreCase("❌")) {
-                        manager.sendPrivate(user, step.getNo());
-                        player.setStep(step.getBack());
-                        PlayersManager.updatePlayer(player);
+                        break;
                     }
-                    break;
                 }
-                case "CHOICES": {
-                    String choice = step.getChoices().get(Numbers.getInt(emoji));
-                    if (choice==null) break;
-                    player.setStep(step.getNext());
-                    if (step.isSave()) {
-                        HashMap<String, String> register = player.getRegister();
-                        register.put(step.getName(), choice);
-                        player.setRegister(register);
-                    }
-                    PlayersManager.updatePlayer(player);
-                    break;
+                PlayersManager.updatePlayer(player);
+                message.delete().queue();
+                privateSend(player, channel);
+            } else if (player.getStep().equals("ACCEPTED")) {
+                //  Green for team invitation ONLY
+                if (!message.getEmbeds().get(0).getColor().equals(Color.green)) return;
+                if (emoji.equalsIgnoreCase("✅")) {
+                    teamAccept(user, message);
+                } else if (emoji.equalsIgnoreCase("❌")) {
+                    //  User deny request, inform request sender
+                    manager.sendPrivate(api.getUserById(message.getEmbeds().get(0).getFooter().getText()),
+                            BotManager.msgUsername(gPublic.getMember(user), (String) msg.get("request_reply_deny")));
                 }
-                case "END": {
-                    if (!message.getEmbeds().get(0).getColor().equals(Color.green)) return;
-                    if (emoji.equalsIgnoreCase("✅")) {
-                        teamAccept(user, message);
-                    } else if (emoji.equalsIgnoreCase("❌")) {
-                        //  User deny request, inform request sender
-                        manager.sendPrivate(api.getUserById(message.getEmbeds().get(0).getFooter().getText()),
-                                BotManager.msgUsername(gPublic.getMember(user), (String) msg.get("request_reply_deny")));
-                    }
-                    message.delete().queue();
-                }
+            } else if (player.getStep().equals("REFUSED")) {
+                manager.sendPrivate(user, BotManager.msgMention(user, (String) msg.get("register_refused_waitmsg")));
             }
-            registerSend(player, user, channel);
         } catch (SQLException throwables) {
             if (Main.debugExeptions) throwables.printStackTrace();
         }
@@ -185,7 +194,7 @@ public class Register extends ListenerAdapter {
     /**
      * Send the new step message to user in channel
      */
-    private void registerSend(Player player, User user, PrivateChannel channel) {
+    private void privateSend(Player player, PrivateChannel channel) {
         if (BotManager.steps.containsKey(player.getStep())) return;
         Step step = BotManager.steps.get(player.getStep());
         switch (step.getType()) {
@@ -199,10 +208,43 @@ public class Register extends ListenerAdapter {
                 break;
             }
             case "CHOICES": {
-                manager.sendEmbed(channel, getCHOICESEmbed(step).build());
+                channel.sendMessage(getCHOICESEmbed(step).build()).queue(message -> {
+                    int loop = 1;
+                    for (String ignored : step.getChoices()) {
+                        message.addReaction(Numbers.getString(loop)).queue();
+                        loop++;
+                    }
+                });
+                break;
+            }
+            case "END": {
+                EmbedBuilder builder = getFINALEmbed(player);
+                builder.setDescription(step.getMessage());
+                manager.sendEmbed(channel, builder.build());
                 break;
             }
         }
+    }
+
+    /**
+     * Called when the staff approve the player
+     */
+    private void formStaffValidate() {
+
+    }
+
+    /**
+     * Get an embed with full responses of player
+     */
+    private EmbedBuilder getFINALEmbed(Player player) {
+        EmbedBuilder builder = new EmbedBuilder();
+        builder.setColor(Color.red).setDescription((String) msg.get("register_staff_message"))
+                .setImage("https://crafatar.com/renders/body/" + player.getUuid().toString() + "?size=512&overlay&default=MHF_Alex");
+        for (Map.Entry<String, String> loop : player.getRegister().entrySet()) {
+            builder.addField(loop.getValue(), loop.getKey(), true);
+        }
+        builder.setFooter(String.valueOf(player.getDiscord_id()));
+        return builder;
     }
 
     /**

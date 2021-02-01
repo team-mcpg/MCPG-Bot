@@ -52,9 +52,9 @@ public class Step {
     /**
      * TEXT type step constructor
      */
-    public Step(String name, String message, int min, int max, String next, boolean save) {
+    public Step(String name, String type, String message, int min, int max, String next, boolean save) {
         this.name = name;
-        this.type = "TEXT";
+        this.type = type;
         this.message = message;
         this.min = min;
         this.max = max;
@@ -69,9 +69,9 @@ public class Step {
     /**
      * VALID type step constructor
      */
-    public Step(String name, String message, String yes, String no, String back, String next, boolean save) {
+    public Step(String name, String type, String message, String yes, String no, String back, String next, boolean save) {
         this.name = name;
-        this.type = "VALID";
+        this.type = type;
         this.message = message;
         this.min = 0;
         this.max = 0;
@@ -86,9 +86,9 @@ public class Step {
     /**
      * CHOICES type step constructor
      */
-    public Step(String name, String message, ArrayList<String> choices, String next, boolean save) {
+    public Step(String name, String type, String message, ArrayList<String> choices, String next, boolean save) {
         this.name = name;
-        this.type = "CHOICES";
+        this.type = type;
         this.message = message;
         this.min = 0;
         this.max = 0;

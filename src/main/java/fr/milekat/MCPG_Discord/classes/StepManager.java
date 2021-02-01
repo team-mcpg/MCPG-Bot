@@ -23,7 +23,8 @@ public class StepManager {
                     break;
                 }
                 case "TEXT": {
-                    step = new Step((String) jsonObject.get("type"),
+                    step = new Step((String) jsonObject.get("name"),
+                            (String) jsonObject.get("type"),
                             (String) jsonObject.get("message"),
                             (int) jsonObject.get("min_chars"),
                             (int) jsonObject.get("max_chars"),
@@ -31,8 +32,10 @@ public class StepManager {
                             (boolean) jsonObject.get("save"));
                     break;
                 }
+                case "END":
                 case "VALID": {
-                    step = new Step((String) jsonObject.get("type"),
+                    step = new Step((String) jsonObject.get("name"),
+                            (String) jsonObject.get("type"),
                             (String) jsonObject.get("message"),
                             (String) jsonObject.get("yes"),
                             (String) jsonObject.get("no"),
@@ -46,7 +49,8 @@ public class StepManager {
                     for (Object choice : (JSONArray) jsonObject.get("choices")) {
                         choices.add((String) choice);
                     }
-                    step = new Step((String) jsonObject.get("type"),
+                    step = new Step((String) jsonObject.get("name"),
+                            (String) jsonObject.get("type"),
                             (String) jsonObject.get("message"),
                             choices,
                             (String) jsonObject.get("next"),
