@@ -1,5 +1,6 @@
 package fr.milekat.MCPG_Discord.classes;
 
+import fr.milekat.MCPG_Discord.Main;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
@@ -10,14 +11,18 @@ public class StepManager {
     /**
      * Get "register steps" from config.json file !
      */
-    public static HashMap<String, Step> getSteps(JSONObject config) {
+    public static HashMap<String, Step> getSteps(JSONArray configStep) {
         HashMap<String, Step> steps = new HashMap<>();
-        for (Object node : (JSONArray) config.get("register_steps")) {
+        for (Object node : configStep) {
             JSONObject jsonObject = (JSONObject) node;
+            if (((String) jsonObject.get("name")).contains("__")) continue;
+            if (Main.debug) Main.log("Load step: " + jsonObject.get("name"));
             Step step = new Step();
             switch ((String) jsonObject.get("type")) {
                 case "INIT": {
-                    step = new Step((String) jsonObject.get("type"),
+                    step = new Step((String) jsonObject.get("name"),
+                            (String) jsonObject.get("type"),
+                            (String) jsonObject.get("message"),
                             (String) jsonObject.get("next"),
                             (boolean) jsonObject.get("save"));
                     break;
@@ -26,8 +31,8 @@ public class StepManager {
                     step = new Step((String) jsonObject.get("name"),
                             (String) jsonObject.get("type"),
                             (String) jsonObject.get("message"),
-                            (int) jsonObject.get("min_chars"),
-                            (int) jsonObject.get("max_chars"),
+                            (Long) jsonObject.get("min_chars"),
+                            (Long) jsonObject.get("max_chars"),
                             (String) jsonObject.get("next"),
                             (boolean) jsonObject.get("save"));
                     break;

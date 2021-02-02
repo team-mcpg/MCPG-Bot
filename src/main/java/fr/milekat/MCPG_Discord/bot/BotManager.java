@@ -5,6 +5,7 @@ import fr.milekat.MCPG_Discord.classes.Step;
 import fr.milekat.MCPG_Discord.classes.StepManager;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.*;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -21,13 +22,14 @@ public class BotManager {
 
     public BotManager () {
         // Event
-        api = Main.getJda();
+        this.api = Main.getJda();
         id = (JSONObject) Main.getConfig().get("id");
-        msg = (JSONObject) Main.getConfig().get("msg");
+        msg = (JSONObject) Main.getConfig().get("messages");
         api.addEventListener(new Register(this, api, id, msg));
-        api.addEventListener(new Chat(this, api, id, msg));
-        api.addEventListener(new Ban(this, api, id, msg));
-        steps = StepManager.getSteps(Main.getConfig());
+        //api.addEventListener(new Chat(this, api, id, msg));
+        //api.addEventListener(new Ban(this, api, id, msg));
+        steps = StepManager.getSteps((JSONArray) Main.getConfig().get("register_steps"));
+        if (Main.debug) Main.log("Load du bot terminé.");
     }
 
     /**
@@ -86,27 +88,28 @@ public class BotManager {
     /**
      * Recharge les messages du bot depuis le fichier config.json
      */
-    public static void reloadMsg() {
+    public void reloadMsg() {
         try {
             JSONParser jsonParser = new JSONParser();
-            msg = (JSONObject) ((JSONObject) jsonParser.parse(new FileReader("config.json"))).get("msg");
-            steps = StepManager.getSteps(msg);
+            FileReader config = new FileReader("config.json");
+            msg = (JSONObject) ((JSONObject) jsonParser.parse(config)).get("msg");
+            steps = StepManager.getSteps((JSONArray) ((JSONObject) jsonParser.parse(config)).get("register_steps"));
         } catch (IOException | ParseException exception) {
             Main.log("config.json not found");
-            if (Main.debugExeptions) exception.printStackTrace();
+            if (Main.debug) exception.printStackTrace();
         }
     }
 
     /**
      * Recharge les id de channels depuis le fichier config.json
      */
-    public static void reloadCh() {
+    public void reloadCh() {
         try {
             JSONParser jsonParser = new JSONParser();
             id = (JSONObject) ((JSONObject) jsonParser.parse(new FileReader("config.json"))).get("id");
         } catch (IOException | ParseException exception) {
             Main.log("config.json not found");
-            if (Main.debugExeptions) exception.printStackTrace();
+            if (Main.debug) exception.printStackTrace();
         }
     }
 }

@@ -1,7 +1,6 @@
 package fr.milekat.MCPG_Discord.core;
 
 import fr.milekat.MCPG_Discord.Main;
-import fr.milekat.MCPG_Discord.bot.BotManager;
 import net.dv8tion.jda.api.OnlineStatus;
 
 import java.util.Scanner;
@@ -16,9 +15,9 @@ public class Console {
                 } else if (input.equalsIgnoreCase("stop")) {
                     stopSequence();
                 } else if (input.equalsIgnoreCase("reload messages")) {
-                    BotManager.reloadMsg();
+                    Main.getBot().reloadMsg();
                 } else if (input.equalsIgnoreCase("reload channel")) {
-                    BotManager.reloadCh();
+                    Main.getBot().reloadCh();
                 } else if (input.equalsIgnoreCase("debug")) {
                     debug();
                 } else {
@@ -54,7 +53,7 @@ public class Console {
      * Passe en mode debug (throwable Java)
      */
     private void debug() {
-        Main.debugExeptions = !Main.debugExeptions;
-        Main.log("Mode debug: " + Main.debugExeptions + ".");
+        Main.debug = !Main.debug;
+        Main.log("Mode debug: " + Main.debug + ".");
     }
 }

@@ -6,8 +6,8 @@ public class Step {
     private final String name;
     private final String type;
     private final String message;
-    private final int min;
-    private final int max;
+    private final Long min;
+    private final Long max;
     private final String yes;
     private final String no;
     private final String back;
@@ -22,8 +22,8 @@ public class Step {
         this.name = null;
         this.type = null;
         this.message = null;
-        this.min = 0;
-        this.max = 0;
+        this.min = 0L;
+        this.max = 0L;
         this.yes = null;
         this.no = null;
         this.back = null;
@@ -35,12 +35,12 @@ public class Step {
     /**
      * INIT type step constructor
      */
-    public Step(String message, String next, boolean save) {
-        this.name = "INIT";
-        this.type = "INIT";
+    public Step(String name, String type, String message, String next, boolean save) {
+        this.name = name;
+        this.type = type;
         this.message = message;
-        this.min = 0;
-        this.max = 0;
+        this.min = 0L;
+        this.max = 0L;
         this.yes = null;
         this.no = null;
         this.back = null;
@@ -52,7 +52,7 @@ public class Step {
     /**
      * TEXT type step constructor
      */
-    public Step(String name, String type, String message, int min, int max, String next, boolean save) {
+    public Step(String name, String type, String message, Long min, Long max, String next, boolean save) {
         this.name = name;
         this.type = type;
         this.message = message;
@@ -73,8 +73,8 @@ public class Step {
         this.name = name;
         this.type = type;
         this.message = message;
-        this.min = 0;
-        this.max = 0;
+        this.min = 0L;
+        this.max = 0L;
         this.yes = yes;
         this.no = no;
         this.back = back;
@@ -90,8 +90,8 @@ public class Step {
         this.name = name;
         this.type = type;
         this.message = message;
-        this.min = 0;
-        this.max = 0;
+        this.min = 0L;
+        this.max = 0L;
         this.yes = null;
         this.no = null;
         this.back = null;
@@ -112,11 +112,11 @@ public class Step {
         return message;
     }
 
-    public int getMin() {
+    public Long getMin() {
         return min;
     }
 
-    public int getMax() {
+    public Long getMax() {
         return max;
     }
 

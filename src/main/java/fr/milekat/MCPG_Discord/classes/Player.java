@@ -1,6 +1,6 @@
 package fr.milekat.MCPG_Discord.classes;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -14,7 +14,7 @@ public class Player {
     private final long discord_id;
     //  Register step
     private String step;
-    private HashMap<String, String> register;
+    private LinkedHashMap<String, String> register;
     //  Team ID
     private int team;
     /* Bans / Mutes */
@@ -40,9 +40,11 @@ public class Player {
         this.uuid = uuid;
         this.discord_id = discord_id;
         this.step = step;
-        HashMap<String, String> mapRegister = new HashMap<>();
-        for (String loop : register.split("||")) {
-            mapRegister.put(loop.split("|")[0],loop.split("|")[1]);
+        LinkedHashMap<String, String> mapRegister = new LinkedHashMap<>();
+        if (register!=null) {
+            for (String loop : register.split("\\|\\|")) {
+                if (loop.contains("|")) mapRegister.put(loop.split("\\|")[0], loop.split("\\|")[1]);
+            }
         }
         this.register = mapRegister;
         this.team = team;
@@ -83,19 +85,22 @@ public class Player {
         this.step = step;
     }
 
-    public HashMap<String, String> getRegister() {
+    public LinkedHashMap<String, String> getRegister() {
         return register;
     }
 
     public String getStringRegister() {
         StringBuilder sRegister = new StringBuilder();
-        for (Map.Entry<String, String> loop : register.entrySet()) {
-            sRegister.append(loop.getKey()).append("|").append(loop.getValue()).append("||");
+        if (register!=null) {
+            for (Map.Entry<String, String> loop : register.entrySet()) {
+                sRegister.append(loop.getKey()).append("|").append(loop.getValue()).append("||");
+            }
+            return sRegister.toString();
         }
-        return sRegister.toString();
+        return null;
     }
 
-    public void setRegister(HashMap<String, String> register) {
+    public void setRegister(LinkedHashMap<String, String> register) {
         this.register = register;
     }
 

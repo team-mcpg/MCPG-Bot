@@ -15,7 +15,7 @@ import org.json.simple.JSONObject;
 
 import java.awt.*;
 import java.sql.SQLException;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -44,44 +44,50 @@ public class Register extends ListenerAdapter {
         this.api = api;
         this.id = id;
         this.msg = msg;
-        this.gStaff = api.getGuildById((String) id.get("gStaff"));
-        this.gPublic = api.getGuildById((String) id.get("gPublic"));
-        this.rValide = api.getRoleById((String) id.get("rValide"));
-        this.cRegister = api.getTextChannelById((String) id.get("cRegister"));
-        this.cCandid = api.getTextChannelById((String) id.get("cCandid"));
-        this.cAccept = api.getTextChannelById((String) id.get("cAccept"));
-        this.cDeny = api.getTextChannelById((String) id.get("cDeny"));
-        this.cTeamSearch = api.getTextChannelById((String) id.get("cTeamSearch"));
+        this.gStaff = api.getGuildById((Long) id.get("gStaff"));
+        this.gPublic = api.getGuildById((Long) id.get("gPublic"));
+        this.rValide = api.getRoleById((Long) id.get("rValide"));
+        this.cRegister = api.getTextChannelById((Long) id.get("cRegister"));
+        this.cCandid = api.getTextChannelById((Long) id.get("cCandid"));
+        this.cAccept = api.getTextChannelById((Long) id.get("cAccept"));
+        this.cDeny = api.getTextChannelById((Long) id.get("cDeny"));
+        this.cTeamSearch = api.getTextChannelById((Long) id.get("cTeamSearch"));
     }
 
     @Override
     public void onMessageReceived(@NotNull MessageReceivedEvent event) {
+        if (event.getAuthor().isBot()) return;
         if (event.getChannel().getType().equals(ChannelType.TEXT) && event.getMember() != null) {
             if (event.getTextChannel().equals(cTeamSearch)) {
+                if (Main.debug) Main.log("NEW msg: " + event.getMessage().getId() + " in: " + event.getChannel().getId());
                 if (event.getMessage().getContentRaw().contains("/invite ") && event.getMessage().getMentionedMembers().size() != 0) {
                     teamInvite(event);
                     event.getMessage().delete().queue();
                 }
             }
         } else if (event.getChannel().getType().equals(ChannelType.PRIVATE)) {
+            if (Main.debug) Main.log("NEW Private msg: " + event.getMessage().getId() + " from: " + event.getAuthor().getId());
             privateReceive(event.getMessage(), event.getAuthor(), event.getPrivateChannel(), null);
         }
     }
 
     @Override
     public void onMessageReactionAdd(@NotNull MessageReactionAddEvent event) {
+        if (event.getUser() == null || event.getUser().isBot()) return;
         event.retrieveMessage().queue(message -> {
             if (event.getChannel().getType().equals(ChannelType.TEXT) && event.getUser() != null) {
                 if (event.getTextChannel().equals(cRegister)) {
+                    if (Main.debug) Main.log("NEW reaction from: " + event.getUserId() + " in: " + event.getChannel().getId());
                     if (event.getReactionEmote().getEmoji().equalsIgnoreCase("✅")) {
-                        manager.sendPrivate(event.getUser(), (String) msg.get("register_start"));
                         formStart(event.getUser());
                     }
+                    if (Main.debug) Main.log(event.getReactionEmote().getAsReactionCode());
                 } else if (event.getTextChannel().equals(cCandid)) {
                     // TODO: 30/01/2021 Réaction sur candidature, vote du staff
                 }
             } else if (event.getChannel().getType().equals(ChannelType.PRIVATE) && event.getUser() != null &&
                     message.getAuthor().isBot() && message.getEmbeds().size() == 1) {
+                if (Main.debug) Main.log("NEW Private reaction from: " + event.getUser().getId());
                 privateReceive(message, event.getUser(), event.getPrivateChannel(), event.getReactionEmote().getName());
             }
         });
@@ -94,13 +100,13 @@ public class Register extends ListenerAdapter {
         try {
             Player player = PlayersManager.createPlayer(user.getIdLong());
             Step step = BotManager.steps.get(player.getStep());
-            manager.sendPrivate(user, step.getMessage());
+            manager.sendPrivate(user, BotManager.msgMention(user, step.getMessage()));
             player.setStep(step.getNext());
             PlayersManager.updatePlayer(player);
             user.openPrivateChannel().queue(channel -> privateSend(player, channel));
         } catch (SQLException throwables) {
             manager.sendPrivate(user, (String) msg.get("data error"));
-            if (Main.debugExeptions) throwables.printStackTrace();
+            if (Main.debug) throwables.printStackTrace();
         }
     }
 
@@ -123,7 +129,7 @@ public class Register extends ListenerAdapter {
                             }
                             player.setStep(step.getNext());
                             if (step.isSave()) {
-                                HashMap<String, String> register = player.getRegister();
+                                LinkedHashMap<String, String> register = player.getRegister();
                                 register.put(step.getName(), message.getContentRaw().replaceAll("\\|", ""));
                                 player.setRegister(register);
                             }
@@ -135,7 +141,7 @@ public class Register extends ListenerAdapter {
                             manager.sendPrivate(user, step.getYes());
                             player.setStep(step.getNext());
                             if (step.isSave()) {
-                                HashMap<String, String> register = player.getRegister();
+                                LinkedHashMap<String, String> register = player.getRegister();
                                 register.put(step.getName(), "yes");
                                 player.setRegister(register);
                             }
@@ -150,7 +156,7 @@ public class Register extends ListenerAdapter {
                         if (choice == null) break;
                         player.setStep(step.getNext());
                         if (step.isSave()) {
-                            HashMap<String, String> register = player.getRegister();
+                            LinkedHashMap<String, String> register = player.getRegister();
                             register.put(step.getName(), choice);
                             player.setRegister(register);
                         }
@@ -171,7 +177,6 @@ public class Register extends ListenerAdapter {
                     }
                 }
                 PlayersManager.updatePlayer(player);
-                message.delete().queue();
                 privateSend(player, channel);
             } else if (player.getStep().equals("ACCEPTED")) {
                 //  Green for team invitation ONLY
@@ -183,11 +188,12 @@ public class Register extends ListenerAdapter {
                     manager.sendPrivate(api.getUserById(message.getEmbeds().get(0).getFooter().getText()),
                             BotManager.msgUsername(gPublic.getMember(user), (String) msg.get("request_reply_deny")));
                 }
+                message.delete().queue();
             } else if (player.getStep().equals("REFUSED")) {
                 manager.sendPrivate(user, BotManager.msgMention(user, (String) msg.get("register_refused_waitmsg")));
             }
         } catch (SQLException throwables) {
-            if (Main.debugExeptions) throwables.printStackTrace();
+            if (Main.debug) throwables.printStackTrace();
         }
     }
 
@@ -195,11 +201,15 @@ public class Register extends ListenerAdapter {
      * Send the new step message to user in channel
      */
     private void privateSend(Player player, PrivateChannel channel) {
-        if (BotManager.steps.containsKey(player.getStep())) return;
+        if (!BotManager.steps.containsKey(player.getStep())) {
+            if (Main.debug) Main.log("Unregister step: " + player.getStep());
+            return;
+        }
+        if (Main.debug) Main.log("New step send");
         Step step = BotManager.steps.get(player.getStep());
         switch (step.getType()) {
             case "TEXT": {
-                manager.sendEmbed(channel, getTEXTEmbed(step).build());
+                channel.sendMessage(getTEXTEmbed(step).build()).queue();
                 break;
             }
             case "VALID": {
@@ -223,6 +233,9 @@ public class Register extends ListenerAdapter {
                 manager.sendEmbed(channel, builder.build());
                 break;
             }
+            default: {
+                if (Main.debug) Main.log("Unknown step: " + step.getType());
+            }
         }
     }
 
@@ -241,7 +254,7 @@ public class Register extends ListenerAdapter {
         builder.setColor(Color.red).setDescription((String) msg.get("register_staff_message"))
                 .setImage("https://crafatar.com/renders/body/" + player.getUuid().toString() + "?size=512&overlay&default=MHF_Alex");
         for (Map.Entry<String, String> loop : player.getRegister().entrySet()) {
-            builder.addField(loop.getValue(), loop.getKey(), true);
+            builder.addField(loop.getValue(), loop.getKey(), false);
         }
         builder.setFooter(String.valueOf(player.getDiscord_id()));
         return builder;
@@ -307,7 +320,7 @@ public class Register extends ListenerAdapter {
             pTarget = PlayersManager.getPlayer(mTarget.getId());
         } catch (SQLException throwables) {
             manager.sendPrivate(event.getAuthor(), (String) msg.get("data error"));
-            if (Main.debugExeptions) throwables.printStackTrace();
+            if (Main.debug) throwables.printStackTrace();
             return;
         }
         //  Max team size, cancel request
@@ -358,7 +371,7 @@ public class Register extends ListenerAdapter {
             manager.sendPrivate(uTarget, ((String) msg.get("request_reply_confirm")).replaceAll("<nom_équipe>", team.getName()));
         } catch (SQLException throwables) {
             manager.sendPrivate(uTarget, (String) msg.get("data error"));
-            if (Main.debugExeptions) throwables.printStackTrace();
+            if (Main.debug) throwables.printStackTrace();
         }
     }
 }

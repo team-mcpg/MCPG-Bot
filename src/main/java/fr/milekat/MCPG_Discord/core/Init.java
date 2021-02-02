@@ -28,7 +28,8 @@ public class Init {
     public JSONObject getConfigs() throws IOException, ParseException {
         JSONParser jsonParser = new JSONParser();
         JSONObject configs = (JSONObject) jsonParser.parse(new FileReader("config.json"));
-        Main.debugJedis = (boolean) configs.get("debug");
+        Main.debug = (boolean) configs.get("debug");
+        Main.debugJedis = (boolean) configs.get("debugjedis");
         return configs;
     }
 
@@ -36,7 +37,7 @@ public class Init {
      * SQL connection + SQL auto ping to prevent the connection to get disconnected
      */
     public MariaManage setSQL() {
-        JSONObject sqlconfig = (JSONObject) Main.getConfig().get("SQL");
+        JSONObject sqlconfig = (JSONObject) Main.getConfig().get("sql");
         Main.SQLPREFIX = (String) sqlconfig.get("SQLPREFIX");
         //  Open SQL connection
         MariaManage mariaManage = new MariaManage("jdbc:mysql://",

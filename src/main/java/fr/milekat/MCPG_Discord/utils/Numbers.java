@@ -4,31 +4,31 @@ public class Numbers {
     public static String getString(int number) {
         switch (number) {
             case 1: {
-                return ":one:";
+                return "1️⃣";
             }
             case 2: {
-                return ":two:";
+                return "2️⃣";
             }
             case 3: {
-                return ":three:";
+                return "3️⃣";
             }
             case 4: {
-                return ":four:";
+                return "4️⃣";
             }
             case 5: {
-                return "five:";
+                return "5️⃣";
             }
             case 6: {
-                return ":six:";
+                return "6️⃣";
             }
             case 7: {
-                return ":seven:";
+                return "7️⃣";
             }
             case 8: {
-                return ":eight:";
+                return "8️⃣";
             }
             case 9: {
-                return ":nine:";
+                return "9️⃣";
             }
         }
         return ":zero:";
@@ -36,31 +36,31 @@ public class Numbers {
 
     public static int getInt(String number) {
         switch (number) {
-            case ":one:": {
+            case "1️⃣": {
                 return 1;
             }
-            case ":two:": {
+            case "2️⃣": {
                 return 2;
             }
-            case ":three:": {
+            case "3️⃣": {
                 return 3;
             }
-            case ":four:": {
+            case "4️⃣": {
                 return 4;
             }
-            case "five:": {
+            case "5️⃣": {
                 return 5;
             }
-            case ":six:": {
+            case "6️⃣": {
                 return 6;
             }
-            case ":seven:": {
+            case "7️⃣": {
                 return 7;
             }
-            case ":eight:": {
+            case "8️⃣": {
                 return 8;
             }
-            case ":nine:": {
+            case "9️⃣": {
                 return 9;
             }
         }

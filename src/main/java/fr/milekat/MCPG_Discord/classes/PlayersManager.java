@@ -17,7 +17,7 @@ public class PlayersManager {
         PreparedStatement q = connection.prepareStatement("SELECT * FROM `mcpg_player` WHERE `discord_id` = ?;");
         q.setLong(1, id);
         q.execute();
-        q.getResultSet().last();
+        q.getResultSet().next();
         Player player = getFromSQL(q);
         q.close();
         return player;
@@ -31,7 +31,7 @@ public class PlayersManager {
         PreparedStatement q = connection.prepareStatement("SELECT * FROM `mcpg_player` WHERE `username` = ?;");
         q.setString(1, username);
         q.execute();
-        q.getResultSet().last();
+        q.getResultSet().next();
         Player player = getFromSQL(q);
         q.close();
         return player;
@@ -67,16 +67,18 @@ public class PlayersManager {
      */
     public static void updatePlayer(Player player) throws SQLException {
         Connection connection = Main.getSql();
-        PreparedStatement q = connection.prepareStatement("INSERT INTO `mcpg_player`(`discord_id`, `step`) VALUES (?,?) ON DUPLICATE KEY UPDATE `mcpg_player` SET `username`=?,`uuid`=?,`discord_id`=?,`step`=?,`register`=?,`team_id`=?,`muted`=?,`banned`=?,`reason`=?");
-        q.setString(1, player.getUsername());
-        q.setLong(2, player.getDiscord_id());
-        q.setString(3, player.getStep());
-        q.setString(4, player.getStringRegister());
-        q.setInt(5, player.getTeam());
-        q.setString(6, player.getMuted());
-        q.setString(7, player.getBanned());
-        q.setString(8, player.getReason());
-        q.setString(9, player.getUuid().toString());
+        PreparedStatement q = connection.prepareStatement("INSERT INTO `mcpg_player`(`discord_id`, `step`) VALUES (?,?) ON DUPLICATE KEY UPDATE `username`=?,`uuid`=?,`discord_id`=?,`step`=?,`register`=?,`team_id`=?,`muted`=?,`banned`=?,`reason`=?;");
+        q.setLong(1, player.getDiscord_id());
+        q.setString(2, player.getStep());
+        q.setString(3, player.getUsername());
+        q.setString(4, player.getUuid()!=null ? player.getUuid().toString() : "");
+        q.setLong(5, player.getDiscord_id());
+        q.setString(6, player.getStep());
+        q.setString(7, player.getStringRegister());
+        q.setInt(8, player.getTeam());
+        q.setString(9, player.getMuted());
+        q.setString(10, player.getBanned());
+        q.setString(11, player.getReason());
         q.execute();
         q.close();
     }
@@ -85,14 +87,13 @@ public class PlayersManager {
      * Set Player from SQL ResultSet
      */
     private static Player getFromSQL(PreparedStatement q) throws SQLException {
-
         return new Player(q.getResultSet().getString("username"),
                 q.getResultSet().getString("prefix"),
-                UUID.fromString(q.getResultSet().getString("uuid")),
+                !q.getResultSet().getString("uuid").equals("") ? UUID.fromString(q.getResultSet().getString("uuid")) : null,
                 q.getResultSet().getLong("discord_id"),
                 q.getResultSet().getString("step"),
                 q.getResultSet().getString("register"),
-                q.getResultSet().getInt("team"),
+                q.getResultSet().getInt("team_id"),
                 q.getResultSet().getString("muted"),
                 q.getResultSet().getString("banned"),
                 q.getResultSet().getString("reason"));

@@ -1,5 +1,6 @@
 package fr.milekat.MCPG_Discord;
 
+import fr.milekat.MCPG_Discord.bot.BotManager;
 import fr.milekat.MCPG_Discord.core.Init;
 import fr.milekat.MCPG_Discord.utils.DateMilekat;
 import fr.milekat.MCPG_Discord.utils.MariaManage;
@@ -11,7 +12,7 @@ import java.sql.Connection;
 
 public class Main {
     /* Core */
-    public static boolean debugExeptions = false;
+    public static boolean debug = false;
     private static JSONObject configs;
     /* SQL */
     public static String SQLPREFIX = "BOT_";
@@ -21,6 +22,7 @@ public class Main {
     public static Jedis jedis;
     /* Discord Bot */
     private static JDA jda;
+    private static BotManager bot;
 
     /**
      * Main method
@@ -34,10 +36,12 @@ public class Main {
         jedis = init.getJedis();
         //  Discord bot load
         jda = init.getJDA();
+        bot = new BotManager();
         //  Console load
         init.getConsole().start();
         //  Log
-        log("Load du bot terminé.");
+        log("Debug: " + debug);
+        log("Application ready.");
     }
 
     /**
@@ -77,5 +81,12 @@ public class Main {
      */
     public static JDA getJda() {
         return jda;
+    }
+
+    /**
+     * BOT Manager
+     */
+    public static BotManager getBot() {
+        return bot;
     }
 }
