@@ -14,6 +14,8 @@ import org.jetbrains.annotations.NotNull;
 import org.json.simple.JSONObject;
 
 import java.awt.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -29,7 +31,9 @@ public class Register extends ListenerAdapter {
     private final Guild gStaff;
     private final Guild gPublic;
     /* Roles */
+    private final Role rWainting;
     private final Role rValide;
+    private final Role rAdmin;
     /* Staff Channels */
     private final TextChannel cCandid;
     private final TextChannel cAccept;
@@ -46,12 +50,15 @@ public class Register extends ListenerAdapter {
         this.msg = msg;
         this.gStaff = api.getGuildById((Long) id.get("gStaff"));
         this.gPublic = api.getGuildById((Long) id.get("gPublic"));
+        this.rWainting = api.getRoleById((Long) id.get("rWainting"));
         this.rValide = api.getRoleById((Long) id.get("rValide"));
+        this.rAdmin = api.getRoleById((Long) id.get("rAdmin"));
         this.cRegister = api.getTextChannelById((Long) id.get("cRegister"));
         this.cCandid = api.getTextChannelById((Long) id.get("cCandid"));
         this.cAccept = api.getTextChannelById((Long) id.get("cAccept"));
         this.cDeny = api.getTextChannelById((Long) id.get("cDeny"));
         this.cTeamSearch = api.getTextChannelById((Long) id.get("cTeamSearch"));
+        loadSqlStepsForm();
     }
 
     @Override
@@ -59,14 +66,14 @@ public class Register extends ListenerAdapter {
         if (event.getAuthor().isBot()) return;
         if (event.getChannel().getType().equals(ChannelType.TEXT) && event.getMember() != null) {
             if (event.getTextChannel().equals(cTeamSearch)) {
-                if (Main.debug) Main.log("NEW msg: " + event.getMessage().getId() + " in: " + event.getChannel().getId());
+                if (Main.debug) Main.log("New msg: " + event.getMessage().getId() + " in: " + event.getChannel().getId());
                 if (event.getMessage().getContentRaw().contains("/invite ") && event.getMessage().getMentionedMembers().size() != 0) {
                     teamInvite(event);
                     event.getMessage().delete().queue();
                 }
             }
         } else if (event.getChannel().getType().equals(ChannelType.PRIVATE)) {
-            if (Main.debug) Main.log("NEW Private msg: " + event.getMessage().getId() + " from: " + event.getAuthor().getId());
+            if (Main.debug) Main.log("New Private msg: " + event.getMessage().getId() + " from: " + event.getAuthor().getId());
             privateReceive(event.getMessage(), event.getAuthor(), event.getPrivateChannel(), null);
         }
     }
@@ -77,17 +84,17 @@ public class Register extends ListenerAdapter {
         event.retrieveMessage().queue(message -> {
             if (event.getChannel().getType().equals(ChannelType.TEXT) && event.getUser() != null) {
                 if (event.getTextChannel().equals(cRegister)) {
-                    if (Main.debug) Main.log("NEW reaction from: " + event.getUserId() + " in: " + event.getChannel().getId());
+                    if (Main.debug) Main.log("New reaction from: " + event.getUserId() + " in: " + event.getChannel().getId());
                     if (event.getReactionEmote().getEmoji().equalsIgnoreCase("✅")) {
                         formStart(event.getUser());
                     }
-                    if (Main.debug) Main.log(event.getReactionEmote().getAsReactionCode());
-                } else if (event.getTextChannel().equals(cCandid)) {
-                    // TODO: 30/01/2021 Réaction sur candidature, vote du staff
+                } else if (event.getTextChannel().equals(cCandid) &&
+                        (event.getReactionEmote().getEmoji().equals("✅") || event.getReactionEmote().getEmoji().equals("❌"))) {
+                    formStaffCheckValidate(event.getReaction(), message);
                 }
             } else if (event.getChannel().getType().equals(ChannelType.PRIVATE) && event.getUser() != null &&
                     message.getAuthor().isBot() && message.getEmbeds().size() == 1) {
-                if (Main.debug) Main.log("NEW Private reaction from: " + event.getUser().getId());
+                if (Main.debug) Main.log("New Private reaction from: " + event.getUser().getId());
                 privateReceive(message, event.getUser(), event.getPrivateChannel(), event.getReactionEmote().getName());
             }
         });
@@ -100,10 +107,10 @@ public class Register extends ListenerAdapter {
         try {
             Player player = PlayersManager.createPlayer(user.getIdLong());
             Step step = BotManager.steps.get(player.getStep());
-            manager.sendPrivate(user, BotManager.msgMention(user, step.getMessage()));
+            manager.sendPrivate(user, BotManager.setNick(user, step.getMessage()));
             player.setStep(step.getNext());
             PlayersManager.updatePlayer(player);
-            user.openPrivateChannel().queue(channel -> privateSend(player, channel));
+            user.openPrivateChannel().queue(channel -> privateSend(user, player, channel));
         } catch (SQLException throwables) {
             manager.sendPrivate(user, (String) msg.get("data error"));
             if (Main.debug) throwables.printStackTrace();
@@ -123,7 +130,7 @@ public class Register extends ListenerAdapter {
                 switch (step.getType()) {
                     case "TEXT": {
                         if (step.getMin() < message.getContentRaw().length() && step.getMax() > message.getContentRaw().length()) {
-                            if (step.getName().equals("username")) { //  Username exception
+                            if (step.getName().equals("Pseudo Mc")) { //  Username exception
                                 player.setUsername(message.getContentRaw());
                                 player.setUuid(UUID.fromString(MojangNames.getUuid(message.getContentRaw())));
                             }
@@ -152,7 +159,7 @@ public class Register extends ListenerAdapter {
                         break;
                     }
                     case "CHOICES": {
-                        String choice = step.getChoices().get(Numbers.getInt(emoji));
+                        String choice = step.getChoices().get(Numbers.getInt(emoji) - 1);
                         if (choice == null) break;
                         player.setStep(step.getNext());
                         if (step.isSave()) {
@@ -164,10 +171,11 @@ public class Register extends ListenerAdapter {
                     }
                     case "END": {
                         if (emoji.equalsIgnoreCase("✅")) {
-                            manager.sendEmbed(cCandid, getFINALEmbed(player).build());
+                            manager.sendEmbed(cCandid, getFINALEmbed(user, player).build());
                             manager.sendPrivate(user, step.getYes());
                             player.setStep("WAITING");
                             PlayersManager.updatePlayer(player);
+                            channel.close().queue();
                             return; //  End of from !
                         } else if (emoji.equalsIgnoreCase("❌")) {
                             manager.sendPrivate(user, step.getNo());
@@ -177,7 +185,7 @@ public class Register extends ListenerAdapter {
                     }
                 }
                 PlayersManager.updatePlayer(player);
-                privateSend(player, channel);
+                privateSend(user, player, channel);
             } else if (player.getStep().equals("ACCEPTED")) {
                 //  Green for team invitation ONLY
                 if (!message.getEmbeds().get(0).getColor().equals(Color.green)) return;
@@ -186,11 +194,11 @@ public class Register extends ListenerAdapter {
                 } else if (emoji.equalsIgnoreCase("❌")) {
                     //  User deny request, inform request sender
                     manager.sendPrivate(api.getUserById(message.getEmbeds().get(0).getFooter().getText()),
-                            BotManager.msgUsername(gPublic.getMember(user), (String) msg.get("request_reply_deny")));
+                            BotManager.setNick(gPublic.getMember(user), (String) msg.get("request_reply_deny")));
                 }
                 message.delete().queue();
             } else if (player.getStep().equals("REFUSED")) {
-                manager.sendPrivate(user, BotManager.msgMention(user, (String) msg.get("register_refused_waitmsg")));
+                manager.sendPrivate(user, BotManager.setNick(user, (String) msg.get("register_refused")));
             }
         } catch (SQLException throwables) {
             if (Main.debug) throwables.printStackTrace();
@@ -200,25 +208,25 @@ public class Register extends ListenerAdapter {
     /**
      * Send the new step message to user in channel
      */
-    private void privateSend(Player player, PrivateChannel channel) {
+    private void privateSend(User user, Player player, PrivateChannel channel) {
         if (!BotManager.steps.containsKey(player.getStep())) {
-            if (Main.debug) Main.log("Unregister step: " + player.getStep());
+            if (Main.debug) Main.log("Unregister step: " + player.getStep() + " for: " + player.getDiscord_id());
             return;
         }
-        if (Main.debug) Main.log("New step send");
         Step step = BotManager.steps.get(player.getStep());
+        if (Main.debug) Main.log("New step: " + step.getName());
         switch (step.getType()) {
             case "TEXT": {
-                channel.sendMessage(getTEXTEmbed(step).build()).queue();
+                channel.sendMessage(getTEXTEmbed(user, step).build()).queue();
                 break;
             }
             case "VALID": {
                 manager.sendEmbed(channel, //   Skin exception
-                        (step.getName().equals("skin") ? getSKINEmbed(player, step).build() : getVALIDEmbed(step).build()));
+                        (step.getName().equals("Skin") ? getSKINEmbed(user, step, player).build() : getVALIDEmbed(user, step).build()));
                 break;
             }
             case "CHOICES": {
-                channel.sendMessage(getCHOICESEmbed(step).build()).queue(message -> {
+                channel.sendMessage(getCHOICESEmbed(user, step).build()).queue(message -> {
                     int loop = 1;
                     for (String ignored : step.getChoices()) {
                         message.addReaction(Numbers.getString(loop)).queue();
@@ -228,7 +236,7 @@ public class Register extends ListenerAdapter {
                 break;
             }
             case "END": {
-                EmbedBuilder builder = getFINALEmbed(player);
+                EmbedBuilder builder = getFINALEmbed(user, player);
                 builder.setDescription(step.getMessage());
                 manager.sendEmbed(channel, builder.build());
                 break;
@@ -242,19 +250,49 @@ public class Register extends ListenerAdapter {
     /**
      * Called when the staff approve the player
      */
-    private void formStaffValidate() {
-
+    private void formStaffCheckValidate(MessageReaction reaction, Message message) {
+        int count = 0;
+        for (User user : reaction.retrieveUsers()) {
+            try {
+                if (gStaff.getMember(user).getRoles().contains(rAdmin)) {
+                    count++;
+                }
+            } catch (NullPointerException ignored) {}
+        }
+        try {
+            if (count == 3 && reaction.getReactionEmote().getEmoji().equals("✅")) {
+                Player player = PlayersManager.getPlayer(message.getEmbeds().get(0).getFooter().getText());
+                player.setStep("ACCEPTED");
+                PlayersManager.updatePlayer(player);
+                api.openPrivateChannelById(player.getDiscord_id()).queue(channel ->
+                        channel.sendMessage("register_accepted").queue());
+                gPublic.addRoleToMember(player.getDiscord_id(), rValide).queue();
+                cAccept.sendMessage(message).queue();
+                message.delete().queue();
+            } else if (count == 3 && reaction.getReactionEmote().getEmoji().equals("❌")) {
+                Player player = PlayersManager.getPlayer(message.getEmbeds().get(0).getFooter().getText());
+                player.setStep("REFUSED");
+                PlayersManager.updatePlayer(player);
+                api.openPrivateChannelById(player.getDiscord_id()).queue(channel ->
+                        channel.sendMessage((String) msg.get("register_refused")).queue());
+                cDeny.sendMessage(message).queue();
+                message.delete().queue();
+            }
+        } catch (SQLException throwables) {
+            cCandid.sendMessage("SQL ERROR").queue();
+            if (Main.debug) throwables.printStackTrace();
+        }
     }
 
     /**
      * Get an embed with full responses of player
      */
-    private EmbedBuilder getFINALEmbed(Player player) {
+    private EmbedBuilder getFINALEmbed(User user, Player player) {
         EmbedBuilder builder = new EmbedBuilder();
-        builder.setColor(Color.red).setDescription((String) msg.get("register_staff_message"))
-                .setImage("https://crafatar.com/renders/body/" + player.getUuid().toString() + "?size=512&overlay&default=MHF_Alex");
+        builder.setColor(Color.red).setDescription(BotManager.setNick(user, (String) msg.get("register_staff_message"))).setThumbnail(
+                "https://crafatar.com/renders/body/" + player.getUuid().toString() + "?size=512&overlay&default=MHF_Alex");
         for (Map.Entry<String, String> loop : player.getRegister().entrySet()) {
-            builder.addField(loop.getValue(), loop.getKey(), false);
+            builder.addField(":question: " + loop.getKey(), ":arrow_right: " + loop.getValue() + "\n", false);
         }
         builder.setFooter(String.valueOf(player.getDiscord_id()));
         return builder;
@@ -263,9 +301,9 @@ public class Register extends ListenerAdapter {
     /**
      * Get an embed for a TEXT step
      */
-    private EmbedBuilder getTEXTEmbed(Step step) {
+    private EmbedBuilder getTEXTEmbed(User user, Step step) {
         EmbedBuilder builder = new EmbedBuilder();
-        builder.setColor(Color.BLUE).setDescription(step.getMessage())
+        builder.setColor(Color.BLUE).setDescription(BotManager.setNick(user, step.getMessage()))
                 .addField("Min chars", String.valueOf(step.getMin()), true)
                 .addField("Max chars", String.valueOf(step.getMax()), true);
         return builder;
@@ -274,21 +312,21 @@ public class Register extends ListenerAdapter {
     /**
      * Get an embed for a VALID step
      */
-    private EmbedBuilder getVALIDEmbed(Step step) {
+    private EmbedBuilder getVALIDEmbed(User user, Step step) {
         EmbedBuilder builder = new EmbedBuilder();
-        builder.setColor(Color.BLUE).setDescription(step.getMessage());
+        builder.setColor(Color.BLUE).setDescription(BotManager.setNick(user, step.getMessage()));
         return builder;
     }
 
     /**
      * Get an embed for a CHOICES step
      */
-    private EmbedBuilder getCHOICESEmbed(Step step) {
+    private EmbedBuilder getCHOICESEmbed(User user, Step step) {
         EmbedBuilder builder = new EmbedBuilder();
-        builder.setColor(Color.BLUE).setDescription(step.getMessage());
+        builder.setColor(Color.BLUE).setDescription(BotManager.setNick(user, step.getMessage()));
         int loop = 1;
         for (String choice : step.getChoices()) {
-            builder.addField(Numbers.getString(loop), choice, true);
+            builder.addField("Choisir " + Numbers.getString(loop), choice, true);
             if (loop==9) break;
             loop++;
         }
@@ -298,9 +336,9 @@ public class Register extends ListenerAdapter {
     /**
      * Get an embed with skin of player
      */
-    private EmbedBuilder getSKINEmbed(Player player, Step step) {
+    private EmbedBuilder getSKINEmbed(User user, Step step, Player player) {
         EmbedBuilder builder = new EmbedBuilder();
-        builder.setColor(Color.BLUE).setDescription(step.getMessage())
+        builder.setColor(Color.BLUE).setDescription(BotManager.setNick(user, step.getMessage()))
                 .setImage("https://crafatar.com/renders/body/" + player.getUuid().toString() + "?size=512&overlay&default=MHF_Alex");
         return builder;
     }
@@ -336,11 +374,11 @@ public class Register extends ListenerAdapter {
         //  Build request embed
         EmbedBuilder embed = new EmbedBuilder();
         embed.setColor(Color.GREEN)
-                .setDescription(BotManager.msgUsername(event.getMember(), (String) msg.get("request_sent_ask")))
+                .setDescription(BotManager.setNick(event.getMember(), (String) msg.get("request_sent_ask")))
                 .setImage("https://crafatar.com/renders/body/" + sender.getUuid().toString() + "?size=512&overlay&default=MHF_Alex")
                 .setFooter(event.getAuthor().getId());
-        manager.sendPrivate(mTarget.getUser(), embed.build());
-        manager.sendPrivate(event.getAuthor(), BotManager.msgUsername(mTarget, (String) msg.get("request_sent_confirm")));
+        manager.sendEmbed(mTarget.getUser(), embed.build());
+        manager.sendPrivate(event.getAuthor(), BotManager.setNick(mTarget, (String) msg.get("request_sent_confirm")));
     }
 
     /**
@@ -367,11 +405,39 @@ public class Register extends ListenerAdapter {
             team.addMembers(pTarget);
             PlayersManager.updatePlayer(pTarget);
             //  Send messages
-            manager.sendPrivate(uSender, BotManager.msgUsername(mTarget, (String) msg.get("request_reply_validation")));
+            manager.sendPrivate(uSender, BotManager.setNick(mTarget, (String) msg.get("request_reply_validation")));
             manager.sendPrivate(uTarget, ((String) msg.get("request_reply_confirm")).replaceAll("<nom_équipe>", team.getName()));
         } catch (SQLException throwables) {
             manager.sendPrivate(uTarget, (String) msg.get("data error"));
             if (Main.debug) throwables.printStackTrace();
+        }
+    }
+
+    /**
+     * Open all private channels for every players
+     */
+    private void loadSqlStepsForm() {
+        try {
+            Connection connection = Main.getSql();
+            PreparedStatement q = connection.prepareStatement(
+                    "SELECT `discord_id` FROM `mcpg_player` WHERE `step` != 'WAITING' AND `step` != 'ACCEPTED';");
+            q.execute();
+            while (q.getResultSet().next()) {
+                api.openPrivateChannelById(q.getResultSet().getLong("discord_id")).queue();
+            }
+            q = connection.prepareStatement("DELETE FROM `mcpg_player` WHERE `step` = 'REFUSED';");
+            q.execute();
+            q.close();
+            cRegister.retrieveMessageById(cRegister.getLatestMessageIdLong()).queue(message -> {
+                for (Member member : gPublic.getMembersWithRoles(rWainting)) {
+                    for (MessageReaction reaction : message.getReactions()) {
+                        reaction.removeReaction(member.getUser()).queue();
+                    }
+                    gPublic.removeRoleFromMember(member, rWainting).queue();
+                }
+            });
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
         }
     }
 }

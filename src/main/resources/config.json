@@ -6,7 +6,9 @@
   "id" : {
     "gStaff" : 0,
     "gPublic" : 0,
+    "rWainting" : 0,
     "rValide" : 0,
+    "rAdmin" : 0,
     "cRegister" : 0,
     "cCandid" : 0,
     "cAccept" : 0,
@@ -27,11 +29,12 @@
     "request_reply_deny": ":x: **Invitation refusée**\n\n<pseudo> a refusé l’invitation que tu lui as envoyée.",
     "team growth": ":people_holding_hands: **Equipe**\n\nTon équipe a bien été créée. Le nom actuel de ton équipe est : **<nom_ équipe>**.\nSi tu souhaite le modifier, utilise la commande : /teamname <nouveau_nom>, dans mon privé.",
     "register_staff_message": "Nouvelle candidature reçue.",
-    "register_refused_waitmsg": ":x: **Candidature refusée**\n\nDésolé <pseudo>, ta candidature à la <nom_cité> a été refusée. Si toutefois tu es réellement motivé pour participer à cette cité et que tu souhaites revoir ta candidature, tu peux la renouveler dans 24 heures."
+    "register_accepted" : ":white_check_mark: **Candidature acceptée**\n\nTa candidature à la <nom_cité> vient d’être acceptée !\nTu peux désormais inviter des personnes pour créer une équipe, si tu le souhaite.\n:warning: **Attention ! La création d’une team est définitive, tu ne pourras pas revenir en arrière et jouer en solo une fois une invitation envoyée.**",
+    "register_refused": ":x: **Candidature refusée**\n\nDésolé <pseudo>, ta candidature à la <nom_cité> a été refusée. Si toutefois tu es réellement motivé pour participer à cette cité et que tu souhaites revoir ta candidature, tu peux la renouveler dans 24 heures."
   },
   "register_steps" : [
     {
-      "name" : "_exemple",
+      "name" : "__exemple",
       "type" : "!mandatory: TEXT, VALID, CHOICES",
       "message" : "!mandatory: Answer",
       "min_chars" : 10,
@@ -44,54 +47,54 @@
       "save" : "true / false, if you want see this step in Staff Embed"
     },
     {
-      "_info" : "This is not a step, this is the beginning of the form",
+      "__info" : "This is not a step, this is the beginning of the form",
       "name" : "init",
       "type" : "INIT",
       "message" : "Bonjour <pseudo> ! :wave:\nMerci de t’intéresser à la <nom_cité>. Nous allons débuter ton inscription qui sera soumise à validation auprès de notre Staff.",
-      "next" : "username",
+      "next" : "Pseudo Mc",
       "save" : false
     },
     {
-      "name" : "username",
+      "name" : "Pseudo Mc",
       "type" : "TEXT",
       "message" : "Quel est ton pseudo minecraft exact (Respecter majuscules svp)",
       "min_chars" : 1,
       "max_chars" : 16,
-      "next" : "skin",
+      "next" : "Skin",
       "save" : true
     },
     {
-      "name" : "skin",
+      "name" : "Skin",
       "type" : "VALID",
       "message" : "Est-ce bien toi ?",
       "yes" : "Super !",
       "no" : "D'accord, nous allons donc recommencer.",
-      "return_step" : "init",
-      "next" : "player_type",
+      "return_step" : "Pseudo Mc",
+      "next" : "Type de joueur",
       "save" : false
     },
     {
-      "name" : "player_type",
+      "name" : "Type de joueur",
       "type" : "CHOICES",
       "message" : "Quel type de joueur es-tu ?",
       "choices" : ["Farm", "TryHard les $$s", "PVP", "FUN", "Visiteur", "Foutre la merde"],
-      "next" : "motivation",
+      "next" : "Motivations",
       "save" : true
     },
     {
-      "name" : "motivation",
+      "name" : "Motivations",
       "type" : "TEXT",
-      "message" : "Quelles sont tes motivations ? (txt libre min 20 mots)",
+      "message" : "Quelles sont tes motivations ?",
       "min_chars" : 100,
       "max_chars" : 500,
-      "next" : "colour",
+      "next" : "Couleur",
       "save" : true
     },
     {
-      "name" : "colour",
+      "name" : "Couleur",
       "type" : "CHOICES",
       "message" : "Ta couleur préférée ?",
-      "choices" : ["rouge", "vert", "jaune"],
+      "choices" : ["Violet", "Indigo", "Bleu", "Vert", "Jaune", "Orangé", "Rouge"],
       "next" : "end",
       "save" : true
     },
@@ -101,7 +104,7 @@
       "message" : "Valides-tu ta candidature ?",
       "yes" : "Merci <pseudo> ! :thumbups:\nTon inscription a bien été enregistrée. Tu recevras un autre message lorsque celle-ci aura été traitée, pour t’indiquer si elle est acceptée ou refusée.",
       "no" : "Très bien, alors je recommence !",
-      "return_step" : "init",
+      "return_step" : "Pseudo Mc",
       "save" : false
     }
   ],

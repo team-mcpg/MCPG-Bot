@@ -35,15 +35,16 @@ public class BotManager {
     /**
      * Replace "@mention" with mentioned user
      */
-    public static String msgMention(User user, String message) {
-        return message.replaceAll("@mention", user.getAsMention());
+    public static String setNick(User user, String message) {
+        return message.replaceAll("@mention", user.getAsMention()).replaceAll("<pseudo>", user.getName());
     }
 
     /**
      * Replace "<pseudo>" with nickname of member
      */
-    public static String msgUsername(Member member, String message) {
-        return message.replaceAll("<pseudo>", member.getNickname()==null ? member.getEffectiveName() : member.getNickname());
+    public static String setNick(Member member, String message) {
+        return message.replaceAll("@mention", member.getAsMention())
+                .replaceAll("<pseudo>", member.getNickname()==null ? member.getEffectiveName() : member.getNickname());
     }
 
     /**
@@ -58,7 +59,7 @@ public class BotManager {
     /**
      * Method to send an embed to user with ✅/❌
      */
-    public void sendPrivate(User user, MessageEmbed embed) {
+    public void sendEmbed(User user, MessageEmbed embed) {
         user.openPrivateChannel().queue(privateChannel ->
                         privateChannel.sendMessage(embed).queue(message ->
                                 message.addReaction("✅").queue(reaction ->
@@ -72,7 +73,7 @@ public class BotManager {
      */
     public void sendPrivate(User user, String message) {
         user.openPrivateChannel().queue(
-                privateChannel -> privateChannel.sendMessage(message).queue(),
+                privateChannel -> privateChannel.sendMessage(setNick(user, message)).queue(),
                 throwable -> cantSendPrivate(user)
         );
     }
@@ -82,7 +83,7 @@ public class BotManager {
      */
     private void cantSendPrivate(User user) {
         TextChannel channel = api.getTextChannelById((long) id.get(""));
-        if (channel!=null) channel.sendMessage(msgMention(user, (String) msg.get("cantmp"))).queue();
+        if (channel!=null) channel.sendMessage(setNick(user, (String) msg.get("cantmp"))).queue();
     }
 
     /**
