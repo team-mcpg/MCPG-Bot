@@ -18,9 +18,8 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.List;
+import java.util.*;
 
 public class Register extends ListenerAdapter {
     /* Main */
@@ -32,7 +31,7 @@ public class Register extends ListenerAdapter {
     private final Guild gStaff;
     private final Guild gPublic;
     /* Roles */
-    private final Role rWainting;
+    private final Role rWaiting;
     private final Role rValide;
     private final Role rAdmin;
     /* Staff Channels */
@@ -51,7 +50,7 @@ public class Register extends ListenerAdapter {
         this.msg = msg;
         this.gStaff = api.getGuildById((Long) id.get("gStaff"));
         this.gPublic = api.getGuildById((Long) id.get("gPublic"));
-        this.rWainting = api.getRoleById((Long) id.get("rWainting"));
+        this.rWaiting = api.getRoleById((Long) id.get("rWaiting"));
         this.rValide = api.getRoleById((Long) id.get("rValide"));
         this.rAdmin = api.getRoleById((Long) id.get("rAdmin"));
         this.cRegister = api.getTextChannelById((Long) id.get("cRegister"));
@@ -67,7 +66,8 @@ public class Register extends ListenerAdapter {
         if (event.getAuthor().isBot()) return;
         if (event.getChannel().getType().equals(ChannelType.TEXT) && event.getMember() != null) {
             if (event.getTextChannel().equals(cTeamSearch)) {
-                if (Main.debug) Main.log("[" + event.getAuthor().getAsTag() + "] New msg: " + event.getMessage().getContentRaw());
+                if (Main.debug) Main.log("[" + event.getAuthor().getAsTag() + "] New msg: " + event.getMessage().getContentRaw() +
+                        " in: " + event.getChannel().getName());
                 if (event.getMessage().getContentRaw().contains("/invite ") && event.getMessage().getMentionedMembers().size() != 0) {
                     teamInvite(event);
                     event.getMessage().delete().queue();
@@ -82,21 +82,22 @@ public class Register extends ListenerAdapter {
     @Override
     public void onMessageReactionAdd(@NotNull MessageReactionAddEvent event) {
         if (event.getUser() == null || event.getUser().isBot()) return;
+        User user = event.getUser();
+        String emoji = event.getReactionEmote().getEmoji();
         event.retrieveMessage().queue(message -> {
-            if (event.getChannel().getType().equals(ChannelType.TEXT) && event.getUser() != null) {
-                if (event.getTextChannel().equals(cRegister)) {
-                    if (Main.debug) Main.log("[" + event.getUser().getAsTag() + "] Add reaction in: " + event.getChannel().getId());
-                    if (event.getReactionEmote().getEmoji().equalsIgnoreCase("✅")) {
-                        formStart(event.getUser());
-                    }
-                } else if (event.getTextChannel().equals(cCandid) &&
-                        (event.getReactionEmote().getEmoji().equals("✅") || event.getReactionEmote().getEmoji().equals("❌"))) {
-                    formStaffCheckValidate(event.getReaction(), message);
+            if (event.getChannel().getType().equals(ChannelType.TEXT) && event.getMember() != null) {
+                if (event.getTextChannel().equals(cRegister) && !event.getMember().getRoles().contains(rWaiting)) {
+                    if (Main.debug) Main.log("[" + user.getAsTag() + "] Add reaction in: " + event.getChannel().getName());
+                    formStart(user);
+                } else if (event.getTextChannel().equals(cCandid) && (emoji.equals("✅") || emoji.equals("❌"))) {
+                    if (Main.debug) Main.log("[" + user.getAsTag() + "] Add reaction in: " + event.getChannel().getName());
+                    event.getReaction().retrieveUsers().queue(users -> gStaff.retrieveMembers(users).onSuccess(members ->
+                            formStaffCheckValidate(members, event.getReaction().getReactionEmote().getEmoji(), message)));
                 }
             } else if (event.getChannel().getType().equals(ChannelType.PRIVATE) && event.getUser() != null &&
                     message.getAuthor().isBot() && message.getEmbeds().size() == 1) {
-                if (Main.debug) Main.log("[" + event.getUser().getAsTag() + "] Private reaction");
-                privateReceive(message, event.getUser(), event.getPrivateChannel(), event.getReactionEmote().getName());
+                if (Main.debug) Main.log("[" + user.getAsTag() + "] Private reaction");
+                privateReceive(message, user, event.getPrivateChannel(), emoji);
             }
         });
     }
@@ -186,6 +187,7 @@ public class Register extends ListenerAdapter {
                             manager.sendPrivate(user, step.getYes());
                             player.setStep("WAITING");
                             PlayersManager.updatePlayer(player);
+                            gPublic.retrieveMember(user).queue(member -> gPublic.addRoleToMember(member, rWaiting).queue());
                             channel.close().queue();
                             return; //  End of from !
                         } else if (emoji.equalsIgnoreCase("❌")) {
@@ -265,35 +267,39 @@ public class Register extends ListenerAdapter {
     /**
      * Called when the staff approve the player
      */
-    private void formStaffCheckValidate(MessageReaction reaction, Message message) {
+    private void formStaffCheckValidate(List<Member> members, String reaction, Message message) {
         int count = 0;
-        for (User user : reaction.retrieveUsers()) {
-            try {
-                if (gStaff.getMember(user).getRoles().contains(rAdmin)) {
-                    count++;
-                }
-            } catch (NullPointerException ignored) {}
+        for (Member member : members) {
+            if (member.getRoles().contains(rAdmin)) {
+                count++;
+            }
         }
         try {
-            if (count == 3 && reaction.getReactionEmote().getEmoji().equals("✅")) {
-                Player player = PlayersManager.getPlayer(message.getEmbeds().get(0).getFooter().getText());
+            Player player = PlayersManager.getPlayer(Long.parseLong(message.getEmbeds().get(0).getFooter().getText()));
+            if (count < 3 || player.getStep().equals("ACCEPTED") || player.getStep().equals("REFUSED")) return;
+            if (reaction.equals("✅")) {
                 player.setStep("ACCEPTED");
                 PlayersManager.updatePlayer(player);
-                api.openPrivateChannelById(player.getDiscord_id()).queue(channel ->
-                        channel.sendMessage("register_accepted").queue());
+                api.openPrivateChannelById(player.getDiscord_id()).queue(channel -> {
+                    channel.sendMessage(BotManager.setNick(channel.getUser(),(String) msg.get("register_accepted"))).queue();
+                    channel.close().queue();
+                });
                 gPublic.addRoleToMember(player.getDiscord_id(), rValide).queue();
+                gPublic.removeRoleFromMember(player.getDiscord_id(), rWaiting).queue();
                 cAccept.sendMessage(message).queue();
-                message.delete().queue();
-            } else if (count == 3 && reaction.getReactionEmote().getEmoji().equals("❌")) {
-                Player player = PlayersManager.getPlayer(message.getEmbeds().get(0).getFooter().getText());
+                if (Main.debug) Main.log("[" + player.getUsername() + "] Candidature acceptée.");
+            } else if (reaction.equals("❌")) {
                 player.setStep("REFUSED");
                 PlayersManager.updatePlayer(player);
-                api.openPrivateChannelById(player.getDiscord_id()).queue(channel ->
-                        channel.sendMessage((String) msg.get("register_refused")).queue());
+                api.openPrivateChannelById(player.getDiscord_id()).queue(channel -> {
+                    channel.sendMessage(BotManager.setNick(channel.getUser(), (String) msg.get("register_refused"))).queue();
+                    channel.close().queue();
+                });
                 cDeny.sendMessage(message).queue();
-                message.delete().queue();
+                if (Main.debug) Main.log("[" + player.getUsername() + "] Candidature refusée.");
             }
-        } catch (SQLException throwables) {
+            message.delete().queue();
+        } catch (NullPointerException | SQLException throwables) {
             cCandid.sendMessage("SQL ERROR").queue();
             if (Main.debug) throwables.printStackTrace();
         }
@@ -434,23 +440,31 @@ public class Register extends ListenerAdapter {
     private void loadSqlStepsForm() {
         try {
             Connection connection = Main.getSql();
-            PreparedStatement q = connection.prepareStatement(
+            PreparedStatement q;
+            q = connection.prepareStatement("SELECT `discord_id` FROM `mcpg_player` WHERE `step` = 'REFUSED';");
+            q.execute();
+            ArrayList<Long> refused = new ArrayList<>();
+            while (q.getResultSet().next()) {
+                refused.add(q.getResultSet().getLong("discord_id"));
+            }
+            q = connection.prepareStatement("DELETE FROM `mcpg_player` WHERE `step` = 'REFUSED';");
+            q.execute();
+            q = connection.prepareStatement(
                     "SELECT `discord_id` FROM `mcpg_player` WHERE `step` != 'WAITING' AND `step` != 'ACCEPTED';");
             q.execute();
             while (q.getResultSet().next()) {
                 api.openPrivateChannelById(q.getResultSet().getLong("discord_id")).queue();
             }
-            q = connection.prepareStatement("DELETE FROM `mcpg_player` WHERE `step` = 'REFUSED';");
-            q.execute();
             q.close();
-            cRegister.retrieveMessageById(cRegister.getLatestMessageIdLong()).queue(message -> {
-                for (Member member : gPublic.getMembersWithRoles(rWainting)) {
-                    for (MessageReaction reaction : message.getReactions()) {
-                        reaction.removeReaction(member.getUser()).queue();
+            cRegister.retrieveMessageById((Long) id.get("mRegister")).queue(message ->
+                gPublic.retrieveMembersByIds(refused).onSuccess(members -> {
+                    for (Member member : members) {
+                        for (MessageReaction reaction : message.getReactions()) {
+                            reaction.removeReaction(member.getUser()).queue();
+                        }
+                        gPublic.removeRoleFromMember(member, rWaiting).queue();
                     }
-                    gPublic.removeRoleFromMember(member, rWainting).queue();
-                }
-            });
+            }));
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
