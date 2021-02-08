@@ -13,7 +13,7 @@ public class MojangNames {
     /**
      *      Simple tool to get a string UUID from a Minecraft name (If exist)
      */
-    public static String getUuid(String name) {
+    public static String getUuid(String name) throws IOException {
         String url = "https://api.mojang.com/users/profiles/minecraft/" + name;
         try {
             @SuppressWarnings("deprecation")
@@ -23,8 +23,8 @@ public class MojangNames {
             return UUIDObject.get("id").toString().replaceFirst(
                     "(\\p{XDigit}{8})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}+)",
                     "$1-$2-$3-$4-$5");
-        } catch (IOException | ParseException e) {
-            e.printStackTrace();
+        } catch (ParseException exception) {
+            exception.printStackTrace();
         }
         return "error";
     }

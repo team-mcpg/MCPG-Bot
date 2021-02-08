@@ -71,7 +71,7 @@ public class PlayersManager {
         q.setLong(1, player.getDiscord_id());
         q.setString(2, player.getStep());
         q.setString(3, player.getUsername());
-        q.setString(4, player.getUuid()!=null ? player.getUuid().toString() : "");
+        q.setString(4, player.getUuid()!=null ? player.getUuid().toString() : null);
         q.setLong(5, player.getDiscord_id());
         q.setString(6, player.getStep());
         q.setString(7, player.getStringRegister());
@@ -89,7 +89,7 @@ public class PlayersManager {
     private static Player getFromSQL(PreparedStatement q) throws SQLException {
         return new Player(q.getResultSet().getString("username"),
                 q.getResultSet().getString("prefix"),
-                !q.getResultSet().getString("uuid").equals("") ? UUID.fromString(q.getResultSet().getString("uuid")) : null,
+                q.getResultSet().getString("uuid")!=null ? UUID.fromString(q.getResultSet().getString("uuid")) : null,
                 q.getResultSet().getLong("discord_id"),
                 q.getResultSet().getString("step"),
                 q.getResultSet().getString("register"),

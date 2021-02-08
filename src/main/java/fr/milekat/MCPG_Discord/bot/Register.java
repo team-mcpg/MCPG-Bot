@@ -14,6 +14,7 @@ import org.jetbrains.annotations.NotNull;
 import org.json.simple.JSONObject;
 
 import java.awt.*;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -66,14 +67,14 @@ public class Register extends ListenerAdapter {
         if (event.getAuthor().isBot()) return;
         if (event.getChannel().getType().equals(ChannelType.TEXT) && event.getMember() != null) {
             if (event.getTextChannel().equals(cTeamSearch)) {
-                if (Main.debug) Main.log("New msg: " + event.getMessage().getId() + " in: " + event.getChannel().getId());
+                if (Main.debug) Main.log("[" + event.getAuthor().getAsTag() + "] New msg: " + event.getMessage().getContentRaw());
                 if (event.getMessage().getContentRaw().contains("/invite ") && event.getMessage().getMentionedMembers().size() != 0) {
                     teamInvite(event);
                     event.getMessage().delete().queue();
                 }
             }
         } else if (event.getChannel().getType().equals(ChannelType.PRIVATE)) {
-            if (Main.debug) Main.log("New Private msg: " + event.getMessage().getId() + " from: " + event.getAuthor().getId());
+            if (Main.debug) Main.log("[" + event.getAuthor().getAsTag() + "] Private send: " + event.getMessage().getContentRaw());
             privateReceive(event.getMessage(), event.getAuthor(), event.getPrivateChannel(), null);
         }
     }
@@ -84,7 +85,7 @@ public class Register extends ListenerAdapter {
         event.retrieveMessage().queue(message -> {
             if (event.getChannel().getType().equals(ChannelType.TEXT) && event.getUser() != null) {
                 if (event.getTextChannel().equals(cRegister)) {
-                    if (Main.debug) Main.log("New reaction from: " + event.getUserId() + " in: " + event.getChannel().getId());
+                    if (Main.debug) Main.log("[" + event.getUser().getAsTag() + "] Add reaction in: " + event.getChannel().getId());
                     if (event.getReactionEmote().getEmoji().equalsIgnoreCase("✅")) {
                         formStart(event.getUser());
                     }
@@ -94,7 +95,7 @@ public class Register extends ListenerAdapter {
                 }
             } else if (event.getChannel().getType().equals(ChannelType.PRIVATE) && event.getUser() != null &&
                     message.getAuthor().isBot() && message.getEmbeds().size() == 1) {
-                if (Main.debug) Main.log("New Private reaction from: " + event.getUser().getId());
+                if (Main.debug) Main.log("[" + event.getUser().getAsTag() + "] Private reaction");
                 privateReceive(message, event.getUser(), event.getPrivateChannel(), event.getReactionEmote().getName());
             }
         });
@@ -113,7 +114,10 @@ public class Register extends ListenerAdapter {
             user.openPrivateChannel().queue(channel -> privateSend(user, player, channel));
         } catch (SQLException throwables) {
             manager.sendPrivate(user, (String) msg.get("data error"));
-            if (Main.debug) throwables.printStackTrace();
+            if (Main.debug) {
+                Main.log("[" + user.getAsTag() + "] SQL error");
+                throwables.printStackTrace();
+            }
         }
     }
 
@@ -131,8 +135,15 @@ public class Register extends ListenerAdapter {
                     case "TEXT": {
                         if (step.getMin() < message.getContentRaw().length() && step.getMax() > message.getContentRaw().length()) {
                             if (step.getName().equals("Pseudo Mc")) { //  Username exception
-                                player.setUsername(message.getContentRaw());
-                                player.setUuid(UUID.fromString(MojangNames.getUuid(message.getContentRaw())));
+                                try {
+                                    player.setUsername(message.getContentRaw());
+                                    player.setUuid(UUID.fromString(MojangNames.getUuid(message.getContentRaw())));
+                                } catch (IOException ignored) {
+                                    manager.sendPrivate(user, "Mojang data error please retry.");
+                                    if (Main.debug) Main.log("[" + user.getAsTag() + "] Mojang data error, retry..");
+                                    privateSend(user, player, channel);
+                                    return;
+                                }
                             }
                             player.setStep(step.getNext());
                             if (step.isSave()) {
@@ -201,7 +212,11 @@ public class Register extends ListenerAdapter {
                 manager.sendPrivate(user, BotManager.setNick(user, (String) msg.get("register_refused")));
             }
         } catch (SQLException throwables) {
-            if (Main.debug) throwables.printStackTrace();
+            manager.sendPrivate(user, (String) msg.get("data error"));
+            if (Main.debug) {
+                Main.log("[" + user.getAsTag() + "] SQL error");
+                throwables.printStackTrace();
+            }
         }
     }
 
@@ -210,11 +225,11 @@ public class Register extends ListenerAdapter {
      */
     private void privateSend(User user, Player player, PrivateChannel channel) {
         if (!BotManager.steps.containsKey(player.getStep())) {
-            if (Main.debug) Main.log("Unregister step: " + player.getStep() + " for: " + player.getDiscord_id());
+            if (Main.debug) Main.log("[" + user.getAsTag() + "] Unregister step: " + player.getStep());
             return;
         }
         Step step = BotManager.steps.get(player.getStep());
-        if (Main.debug) Main.log("New step: " + step.getName());
+        if (Main.debug) Main.log("[" + user.getAsTag() + "] Send step: " + step.getName());
         switch (step.getType()) {
             case "TEXT": {
                 channel.sendMessage(getTEXTEmbed(user, step).build()).queue();
