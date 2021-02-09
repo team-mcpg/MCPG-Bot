@@ -30,6 +30,7 @@ public class Init {
         JSONObject configs = (JSONObject) jsonParser.parse(new FileReader("config.json"));
         Main.debug = (boolean) configs.get("debug");
         Main.debugJedis = (boolean) configs.get("debugjedis");
+        Main.devmode = (boolean) configs.get("devmode");
         return configs;
     }
 

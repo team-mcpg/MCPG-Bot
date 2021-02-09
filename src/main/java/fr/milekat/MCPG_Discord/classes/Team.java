@@ -3,11 +3,18 @@ package fr.milekat.MCPG_Discord.classes;
 import java.util.ArrayList;
 
 public class Team {
-    private final int id;
+    private int id;
     private final String name;
     private final long chief;
     private final int money;
     private ArrayList<Player> members;
+
+    public Team(String name, long chief) {
+        this.name = name;
+        this.chief = chief;
+        this.money = 0;
+        this.members = null;
+    }
 
     public Team(int id, String name, long chief, int money, ArrayList<Player> members) {
         this.id = id;
@@ -19,6 +26,10 @@ public class Team {
 
     public int getId() {
         return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
     }
 
     public String getName() {

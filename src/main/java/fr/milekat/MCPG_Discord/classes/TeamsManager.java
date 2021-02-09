@@ -15,10 +15,10 @@ public class TeamsManager {
         PreparedStatement q = connection.prepareStatement("SELECT * FROM `mcpg_team` WHERE `team_id` = ?;");
         q.setInt(1, id);
         q.execute();
-        q.getResultSet().last();
+        q.getResultSet().next();
         Team team = new Team(id,
                 q.getResultSet().getString("name"),
-                q.getResultSet().getInt("chief_id"),
+                q.getResultSet().getLong("chief_id"),
                 q.getResultSet().getInt("money"),
                 PlayersManager.getTeamMembers(id));
         q.close();
@@ -34,7 +34,7 @@ public class TeamsManager {
         PreparedStatement q = connection.prepareStatement("SELECT team_id FROM `mcpg_player` WHERE `discord_id` = ?;");
         q.setLong(1, id);
         q.execute();
-        q.getResultSet().last();
+        q.getResultSet().next();
         team = q.getResultSet().getInt("team_id");
         q.close();
         return getTeam(team);
@@ -46,10 +46,10 @@ public class TeamsManager {
     public static Team getPlayerTeam(String username) throws SQLException {
         int team;
         Connection connection = Main.getSql();
-        PreparedStatement q = connection.prepareStatement("SELECT * FROM `mcpg_player` WHERE `username` = ?;");
+        PreparedStatement q = connection.prepareStatement("SELECT `team_id` FROM `mcpg_player` WHERE `username` = ?;");
         q.setString(1, username);
         q.execute();
-        q.getResultSet().last();
+        q.getResultSet().next();
         team = q.getResultSet().getInt("team_id");
         q.close();
         return getTeam(team);
@@ -58,12 +58,17 @@ public class TeamsManager {
     /**
      * Create a new team (May not exist)
      */
-    public static void createTeam(Team team) throws SQLException {
+    public static Team createTeam(Team team) throws SQLException {
         Connection connection = Main.getSql();
-        PreparedStatement q = connection.prepareStatement("INSERT INTO `mcpg_team`(`name`) VALUES (?);");
+        PreparedStatement q = connection.prepareStatement(
+                "INSERT INTO `mcpg_team`(`name`, `chief_id`) VALUES (?, ?) RETURNING `team_id`;");
         q.setString(1, team.getName());
+        q.setLong(2, team.getChief());
         q.execute();
+        q.getResultSet().next();
+        team.setId(q.getResultSet().getInt("team_id"));
         q.close();
+        return team;
     }
 
     /**
@@ -96,7 +101,7 @@ public class TeamsManager {
         PreparedStatement q = connection.prepareStatement("SELECT `name` FROM `mcpg_team` WHERE `name` = ?;");
         q.setString(1, teamname);
         q.execute();
-        exist = q.getResultSet().last();
+        exist = q.getResultSet().next();
         q.close();
         return exist;
     }

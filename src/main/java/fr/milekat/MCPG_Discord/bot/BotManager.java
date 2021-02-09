@@ -83,7 +83,7 @@ public class BotManager {
      */
     private void cantSendPrivate(User user) {
         TextChannel channel = api.getTextChannelById((long) id.get(""));
-        if (channel!=null) channel.sendMessage(setNick(user, (String) msg.get("cantmp"))).queue();
+        if (channel!=null) channel.sendMessage(setNick(user, (String) msg.get("cant_mp"))).queue();
     }
 
     /**

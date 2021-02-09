@@ -4,6 +4,7 @@ import fr.milekat.MCPG_Discord.bot.BotManager;
 import fr.milekat.MCPG_Discord.core.Init;
 import fr.milekat.MCPG_Discord.utils.DateMilekat;
 import fr.milekat.MCPG_Discord.utils.MariaManage;
+import fr.milekat.MCPG_Discord.utils.WriteLog;
 import net.dv8tion.jda.api.JDA;
 import org.json.simple.JSONObject;
 import redis.clients.jedis.Jedis;
@@ -12,7 +13,9 @@ import java.sql.Connection;
 
 public class Main {
     /* Core */
+    private static WriteLog logs;
     public static boolean debug = false;
+    public static boolean devmode = false;
     private static JSONObject configs;
     /* SQL */
     public static String SQLPREFIX = "BOT_";
@@ -28,6 +31,8 @@ public class Main {
      * Main method
      */
     public static void main(String[] args) throws Exception {
+        logs = new WriteLog();
+        log("Starting application..");
         Init init = new Init();
         configs = init.getConfigs();
         //  Load SQL + Lancement du ping
@@ -40,7 +45,8 @@ public class Main {
         //  Console load
         init.getConsole().start();
         //  Log
-        log("Debug: " + debug);
+        if (debug) log("Debugs enable");
+        if (devmode) log("Mode dev enable");
         log("Application ready.");
     }
 
@@ -51,6 +57,7 @@ public class Main {
      */
     public static void log(String log) {
         System.out.println("[" + DateMilekat.setDateNow() + "] " + log);
+        logs.logger("[" + DateMilekat.setDateNow() + "] " + log);
     }
 
     /**

@@ -20,6 +20,8 @@ public class Console {
                     Main.getBot().reloadCh();
                 } else if (input.equalsIgnoreCase("debug")) {
                     debug();
+                } else if (input.equalsIgnoreCase("devmode")) {
+                    devmode();
                 } else {
                     Main.log("Commande inconnue");
                     sendHelp();
@@ -55,5 +57,13 @@ public class Console {
     private void debug() {
         Main.debug = !Main.debug;
         Main.log("Mode debug: " + Main.debug + ".");
+    }
+
+    /**
+     * Enable / disable dev mode !
+     */
+    private void devmode() {
+        Main.devmode = !Main.devmode;
+        Main.log("Mode dev: " + Main.devmode + ".");
     }
 }

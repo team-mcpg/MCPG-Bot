@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
 public class DateMilekat {
     private static final Pattern periodPattern = Pattern.compile("([0-9]+)([smhj])");
     private static final DateFormat df = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
-    private static final DateFormat dfsys = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss");
+    private static final DateFormat dfsys = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
 
     public static String setDateNow() {
         return df.format(new Date());
