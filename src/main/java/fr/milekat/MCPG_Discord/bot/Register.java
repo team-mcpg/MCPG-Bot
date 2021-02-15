@@ -9,7 +9,6 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent;
-import net.dv8tion.jda.api.exceptions.HierarchyException;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.jetbrains.annotations.NotNull;
 import org.json.simple.JSONObject;
@@ -29,6 +28,7 @@ public class Register extends ListenerAdapter {
     private final JDA api;
     private final JSONObject id;
     private final JSONObject msg;
+    private final List<String> endSteps = new ArrayList<>(Arrays.asList("WAITING","ACCEPTED", "REFUSED"));
     /* Guilds */
     private final Guild gStaff;
     private final Guild gPublic;
@@ -43,7 +43,6 @@ public class Register extends ListenerAdapter {
     private final TextChannel cDeny;
     /* Public Channels */
     private final TextChannel cRegister;
-    private Message regMsg;
     private final TextChannel cTeamSearch;
 
     public Register(BotManager manager, JDA api, JSONObject id, JSONObject msg) {
@@ -79,7 +78,16 @@ public class Register extends ListenerAdapter {
             }
         } else if (event.getChannel().getType().equals(ChannelType.PRIVATE)) {
             if (Main.debug) Main.log("[" + event.getAuthor().getAsTag() + "] Private send: " + event.getMessage().getContentRaw());
-            privateReceive(event.getMessage(), event.getAuthor(), event.getPrivateChannel(), null);
+            Player player = null;
+            try {
+                player = PlayersManager.getPlayer(event.getAuthor().getIdLong());
+            } catch (SQLException ignore) {}
+            if (player==null) return;
+            if (player.getStep().equals("ACCEPTED") && event.getMessage().getContentRaw().contains("/teamname ")) {
+                updateTeamName(event.getAuthor(), event.getMessage().getContentRaw());
+            } else if (!endSteps.contains(player.getStep())) {
+                privateReceive(event.getMessage(), event.getAuthor(), event.getPrivateChannel(), null);
+            }
         }
     }
 
@@ -87,13 +95,18 @@ public class Register extends ListenerAdapter {
     public void onMessageReactionAdd(@NotNull MessageReactionAddEvent event) {
         if (event.getUser() == null || event.getUser().isBot()) return;
         User user = event.getUser();
-        String emoji = event.getReactionEmote().getEmoji();
+        String emoji = null;
+        try {
+            emoji = event.getReactionEmote().getEmoji();
+        } catch (IllegalStateException ignore) {/* Cannot get emoji code for custom emote reaction */}
+        String finalEmoji = emoji;
         event.retrieveMessage().queue(message -> {
             if (event.getChannel().getType().equals(ChannelType.TEXT) && event.getMember() != null) {
-                if (event.getTextChannel().equals(cRegister) && !event.getMember().getRoles().contains(rWaiting)) {
+                if (event.getTextChannel().equals(cRegister) /* Reg channel + not registered */
+                        && !event.getMember().getRoles().contains(rWaiting) && !event.getMember().getRoles().contains(rValid)) {
                     if (Main.debug) Main.log("[" + user.getAsTag() + "] Add reaction in: " + event.getChannel().getName());
                     formStart(user);
-                } else if (event.getTextChannel().equals(cCandid) && (emoji.equals("✅") || emoji.equals("❌"))) {
+                } else if (event.getTextChannel().equals(cCandid) && (finalEmoji.equals("✅") || finalEmoji.equals("❌"))) {
                     if (Main.debug) Main.log("[" + user.getAsTag() + "] Add reaction in: " + event.getChannel().getName());
                     event.getReaction().retrieveUsers().queue(users -> gStaff.retrieveMembers(users).onSuccess(members ->
                             formStaffCheckValidate(members, event.getReaction().getReactionEmote().getEmoji(), message)));
@@ -101,7 +114,7 @@ public class Register extends ListenerAdapter {
             } else if (event.getChannel().getType().equals(ChannelType.PRIVATE) && event.getUser() != null &&
                     message.getAuthor().isBot() && message.getEmbeds().size() == 1) {
                 if (Main.debug) Main.log("[" + user.getAsTag() + "] Private reaction");
-                privateReceive(message, user, event.getPrivateChannel(), emoji);
+                privateReceive(message, user, event.getPrivateChannel(), finalEmoji);
             }
         });
     }
@@ -310,12 +323,13 @@ public class Register extends ListenerAdapter {
                     channel.sendMessage(BotManager.setNick(channel.getUser(),(String) msg.get("register_accepted"))).queue();
                     channel.close().queue();
                 });
-                try {
-                    gPublic.retrieveMemberById(player.getDiscord_id()).queue(member ->
-                            gPublic.modifyNickname(member, player.getUsername()).queue());
-                } catch (HierarchyException ignore) {}
-                gPublic.addRoleToMember(player.getDiscord_id(), rValid).queue();
-                gPublic.removeRoleFromMember(player.getDiscord_id(), rWaiting).queue();
+                gPublic.retrieveMemberById(player.getDiscord_id()).queue(member -> {
+                    if (gPublic.getSelfMember().canInteract(member)) {
+                        gPublic.modifyNickname(member, player.getUsername()).queue();
+                    }
+                    gPublic.addRoleToMember(member, rValid).queue();
+                    gPublic.removeRoleFromMember(member, rWaiting).queue();
+                });
                 cAccept.sendMessage(message).queue();
                 if (Main.debug) Main.log("[" + player.getUsername() + "] Candidature acceptée.");
             } else if (reaction.equals("❌")) {
@@ -330,7 +344,7 @@ public class Register extends ListenerAdapter {
             }
             message.delete().queue();
         } catch (NullPointerException | SQLException throwables) {
-            cCandid.sendMessage("SQL ERROR").queue();
+            cCandid.sendMessage((String) msg.get("data_error")).queue();
             if (Main.debug) throwables.printStackTrace();
         }
     }
@@ -459,6 +473,8 @@ public class Register extends ListenerAdapter {
                         manager.sendPrivate(uSender,
                                 ((String) msg.get("request_team_created")).replaceAll("<team_name>", team.getName()));
                     }
+                    //  Add team role to sender if he didn't have it already
+                    gPublic.addRoleToMember(uSender.getIdLong(), rTeam).queue();
                     //  Add player to team
                     gPublic.addRoleToMember(mTarget, rTeam).queue();
                     pTarget.setTeam(team.getId());
@@ -468,7 +484,7 @@ public class Register extends ListenerAdapter {
                     manager.sendPrivate(uSender, BotManager.setNick(mTarget,
                             ((String) msg.get("request_reply_validation")).replaceAll("<team_name>", team.getName())));
                     manager.sendPrivate(uTarget,
-                            ((String) msg.get("request_reply_confirm")).replaceAll("<nom_équipe>", team.getName()));
+                            ((String) msg.get("request_reply_confirm")).replaceAll("<team_name>", team.getName()));
                 } catch (SQLException throwables) {
                     manager.sendPrivate(uTarget, (String) msg.get("data_error"));
                     if (Main.debug) throwables.printStackTrace();
@@ -476,6 +492,29 @@ public class Register extends ListenerAdapter {
             }));
         } catch (SQLException throwables) {
             manager.sendPrivate(uTarget, (String) msg.get("data_error"));
+            if (Main.debug) throwables.printStackTrace();
+        }
+    }
+
+    /**
+     * Command /teamname, to rename a team
+     */
+    private void updateTeamName(User user, String message) {
+        if (message.length() > 30) {
+            manager.sendPrivate(user, (String) msg.get("team_too_long_name"));
+        }
+        try {
+            Team team = TeamsManager.getPlayerTeam(user.getIdLong());
+            if (team.getSize() > 1 && team.getChief()==user.getIdLong()) {
+                team.setName(message.replaceAll("/teamname ", ""));
+                TeamsManager.updateTeam(team);
+                for (Player teamMember : team.getMembers()) {
+                    api.openPrivateChannelById(teamMember.getDiscord_id()).queue(channel -> channel.sendMessage(
+                            ((String) msg.get("team_renamed")).replaceAll("<team_name>", team.getName())).queue());
+                }
+            }
+        } catch (SQLException throwables) {
+            manager.sendPrivate(user, (String) msg.get("data_error"));
             if (Main.debug) throwables.printStackTrace();
         }
     }

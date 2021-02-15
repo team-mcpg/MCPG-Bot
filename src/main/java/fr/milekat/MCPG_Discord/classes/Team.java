@@ -4,7 +4,7 @@ import java.util.ArrayList;
 
 public class Team {
     private int id;
-    private final String name;
+    private String name;
     private final long chief;
     private final int money;
     private ArrayList<Player> members;
@@ -34,6 +34,10 @@ public class Team {
 
     public String getName() {
         return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public long getChief() {

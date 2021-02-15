@@ -65,7 +65,7 @@ public class Init {
                     }
                 }, 0, 600000);
             }
-        };
+        }.start();
         return mariaManage;
     }
 

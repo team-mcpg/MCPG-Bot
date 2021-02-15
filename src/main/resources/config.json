@@ -33,6 +33,8 @@
     "request_reply_validation": ":white_check_mark: **Invitation acceptée**\n\n<pseudo> a bien accepté l’invitation à rejoindre ton équipe.",
     "request_reply_deny": ":x: **Invitation refusée**\n\n<pseudo> a refusé l’invitation que tu lui as envoyée.",
     "request_team_created": ":people_holding_hands: **Equipe**\n\nTon équipe a bien été créée. Le nom actuel de ton équipe est : **<nom_ team_name>**.\nSi tu souhaite le modifier, utilise la commande : /teamname <nouveau_nom>, dans mon privé.",
+    "team_renamed": "Ton équipe a été renomée en **<team_name>**.",
+    "team_too_long_name": "Ce nom est trop long (Max 20 caractères)",
     "register_already_exist" : "Désolé, ce pseudo est déjà enregistré, si tu penses qu'il s'agit d'une erreur, contact un admin, sinon essai un autre pseudo.",
     "register_staff_message": "Nouvelle candidature reçue.",
     "register_accepted" : ":white_check_mark: **Candidature acceptée**\n\nTa candidature à la <nom_cité> vient d’être acceptée !\nTu peux désormais inviter des personnes pour créer une équipe, si tu le souhaite.\n:warning: **Attention ! La création d’une team est définitive, tu ne pourras pas revenir en arrière et jouer en solo une fois une invitation envoyée.**",
