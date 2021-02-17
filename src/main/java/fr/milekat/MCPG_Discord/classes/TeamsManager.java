@@ -1,6 +1,7 @@
 package fr.milekat.MCPG_Discord.classes;
 
 import fr.milekat.MCPG_Discord.Main;
+import net.dv8tion.jda.api.EmbedBuilder;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -104,5 +105,24 @@ public class TeamsManager {
         exist = q.getResultSet().next();
         q.close();
         return exist;
+    }
+
+    /**
+     * Format an embed with Team infos
+     */
+    public static EmbedBuilder getTeamEmbed(Team team) {
+        EmbedBuilder embed = new EmbedBuilder();
+        embed.setDescription(team.getName());
+        StringBuilder builder = new StringBuilder();
+        for (Player player : team.getMembers()) {
+            if (player.getDiscord_id()==team.getChief()) {
+                embed.addField("Chef", player.getUsername(), true);
+            } else {
+                builder.append(player.getUsername()).append(System.lineSeparator());
+            }
+        }
+        if (team.getMembers().size()==2) embed.addField("Membre", builder.toString(), true);
+        if (team.getMembers().size() > 2) embed.addField("Membres", builder.toString(), true);
+        return embed;
     }
 }

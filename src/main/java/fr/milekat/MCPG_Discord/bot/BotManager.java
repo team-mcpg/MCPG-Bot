@@ -25,7 +25,9 @@ public class BotManager {
         this.api = Main.getJda();
         id = (JSONObject) Main.getConfig().get("id");
         msg = (JSONObject) Main.getConfig().get("messages");
-        api.addEventListener(new Register(this, api, id, msg));
+        api.addEventListener(new DebugEvent(api, id));
+        api.addEventListener(new RegisterEvent(this, api, id, msg));
+        api.addEventListener(new TeamEvent(this, api, id, msg));
         //api.addEventListener(new Chat(this, api, id, msg));
         //api.addEventListener(new Ban(this, api, id, msg));
         steps = StepManager.getSteps((JSONArray) Main.getConfig().get("register_steps"));
@@ -59,7 +61,7 @@ public class BotManager {
     /**
      * Method to send an embed to user with ✅/❌
      */
-    public void sendEmbed(User user, MessageEmbed embed) {
+    public void sendPrivate(User user, MessageEmbed embed) {
         user.openPrivateChannel().queue(privateChannel ->
                         privateChannel.sendMessage(embed).queue(message ->
                                 message.addReaction("✅").queue(reaction ->
