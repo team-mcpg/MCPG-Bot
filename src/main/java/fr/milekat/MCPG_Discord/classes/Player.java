@@ -7,8 +7,6 @@ import java.util.UUID;
 public class Player {
     //  Minecraft Username
     private String username;
-    //  Minecraft prefix
-    private final String prefix;
     //  Minecraft UUID
     private UUID uuid;
     private final long discord_id;
@@ -26,7 +24,6 @@ public class Player {
      * For new user
      */
     public Player(long discord_id, String step) {
-        this.prefix = null;
         this.discord_id = discord_id;
         this.step = step;
     }
@@ -34,9 +31,8 @@ public class Player {
     /**
      * For users from SQL
      */
-    public Player(String username, String prefix, UUID uuid, long discord_id, String step, String register , int team, String muted, String banned, String reason) {
+    public Player(String username, UUID uuid, long discord_id, String step, String register , int team, String muted, String banned, String reason) {
         this.username = username;
-        this.prefix = prefix;
         this.uuid = uuid;
         this.discord_id = discord_id;
         this.step = step;
@@ -59,10 +55,6 @@ public class Player {
 
     public void setUsername(String username) {
         this.username = username;
-    }
-
-    public String getPrefix() {
-        return prefix;
     }
 
     public UUID getUuid() {

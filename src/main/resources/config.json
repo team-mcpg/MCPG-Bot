@@ -117,7 +117,6 @@
     }
   ],
   "sql" : {
-    "SQLPREFIX": "mcpg_",
     "host": "",
     "db": "",
     "user": "",

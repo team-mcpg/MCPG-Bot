@@ -18,7 +18,6 @@ public class Main {
     public static boolean devmode = false;
     private static JSONObject configs;
     /* SQL */
-    public static String SQLPREFIX = "BOT_";
     private static MariaManage mariaManage;
     /* Jedis */
     public static boolean debugJedis = true;

@@ -153,7 +153,6 @@ public class TeamEvent extends ListenerAdapter {
                     gPublic.retrieveMember(user).queue(member ->
                             manager.sendPrivate(uTarget, BotManager.setNick(member, (String) msg.get("request_reply_deny")))));
         }
-        message.delete().queue();
     }
 
     /**

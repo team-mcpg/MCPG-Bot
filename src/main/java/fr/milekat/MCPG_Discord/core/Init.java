@@ -6,6 +6,8 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.requests.GatewayIntent;
+import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -39,7 +41,6 @@ public class Init {
      */
     public MariaManage setSQL() {
         JSONObject sqlconfig = (JSONObject) Main.getConfig().get("sql");
-        Main.SQLPREFIX = (String) sqlconfig.get("SQLPREFIX");
         //  Open SQL connection
         MariaManage mariaManage = new MariaManage("jdbc:mysql://",
                 (String) sqlconfig.get("host"),
@@ -111,7 +112,12 @@ public class Init {
      * Connect to the Discord bot and set the watching text
      */
     public JDA getJDA() throws LoginException, InterruptedException {
-        JDA api = JDABuilder.createDefault((String) Main.getConfig().get("bot_token")).build().awaitReady();
+        JDA api = JDABuilder.createDefault((String) Main.getConfig().get("bot_token"),
+                GatewayIntent.GUILD_MEMBERS,
+                GatewayIntent.GUILD_MESSAGES,
+                GatewayIntent.GUILD_MESSAGE_REACTIONS,
+                GatewayIntent.DIRECT_MESSAGES,
+                GatewayIntent.DIRECT_MESSAGE_REACTIONS).disableCache(CacheFlag.VOICE_STATE, CacheFlag.EMOTE).build().awaitReady();
         api.getPresence().setPresence(OnlineStatus.ONLINE, Activity.watching((String) Main.getConfig().get("bot_game")));
         return api;
     }

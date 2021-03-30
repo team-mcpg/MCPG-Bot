@@ -7,6 +7,7 @@ import fr.milekat.MCPG_Discord.utils.Numbers;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.*;
+import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -29,6 +30,7 @@ public class RegisterEvent extends ListenerAdapter {
     private final JSONObject id;
     private final JSONObject msg;
     private final List<String> endSteps = new ArrayList<>(Arrays.asList("WAITING","ACCEPTED", "REFUSED"));
+    private final ArrayList<TextChannel> listChannels = new ArrayList<>();
     /* Guilds */
     private final Guild gStaff;
     private final Guild gPublic;
@@ -36,6 +38,7 @@ public class RegisterEvent extends ListenerAdapter {
     private final Role rWaiting;
     private final Role rValid;
     private final Role rAdmin;
+    private final Role rTeam;
     /* Staff Channels */
     private final TextChannel cCandid;
     private final TextChannel cAccept;
@@ -53,11 +56,34 @@ public class RegisterEvent extends ListenerAdapter {
         this.rWaiting = api.getRoleById((Long) id.get("rWaiting"));
         this.rValid = api.getRoleById((Long) id.get("rValid"));
         this.rAdmin = api.getRoleById((Long) id.get("rAdmin"));
+        this.rTeam = api.getRoleById((Long) id.get("rTeam"));
         this.cRegister = api.getTextChannelById((Long) id.get("cRegister"));
         this.cCandid = api.getTextChannelById((Long) id.get("cCandid"));
         this.cAccept = api.getTextChannelById((Long) id.get("cAccept"));
         this.cDeny = api.getTextChannelById((Long) id.get("cDeny"));
+        this.listChannels.add(cRegister);
+        this.listChannels.add(cCandid);
+        this.listChannels.add(cAccept);
+        this.listChannels.add(cDeny);
         loadSqlStepsForm();
+    }
+
+    @Override
+    public void onGuildMemberJoin(GuildMemberJoinEvent event) {
+        if (!event.getUser().isBot() && event.getGuild().equals(gPublic)) {
+            try {
+                Player player = PlayersManager.getPlayer(event.getUser().getIdLong());
+                if (player.getStep().equals("WAITING")) {
+                    gPublic.addRoleToMember(event.getMember(), rWaiting).queue();
+                } else if (player.getStep().equals("ACCEPTED")) {
+                    gPublic.addRoleToMember(event.getMember(), rValid).queue();
+                    if (TeamsManager.getTeam(player.getTeam()).getSize() > 1) {
+                        gPublic.addRoleToMember(event.getMember(), rTeam).queue();
+                    }
+                }
+                gPublic.modifyNickname(event.getMember(), player.getUsername()).queue();
+            } catch (SQLException ignore) {}
+        }
     }
 
     @Override
@@ -66,7 +92,7 @@ public class RegisterEvent extends ListenerAdapter {
             try {
                 Player player = PlayersManager.getPlayer(event.getAuthor().getIdLong());
                 if (!endSteps.contains(player.getStep())) {
-                    formStepReceive(event.getMessage(), event.getAuthor(), event.getPrivateChannel(), null);
+                    formStepReceive(event.getMessage(), event.getAuthor(), player, event.getPrivateChannel(), null);
                 }
             } catch (SQLException ignore) {}
         }
@@ -74,24 +100,29 @@ public class RegisterEvent extends ListenerAdapter {
 
     @Override
     public void onMessageReactionAdd(@NotNull MessageReactionAddEvent event) {
-        if (event.getUser() == null || event.getUser().isBot()) return;
-        User user = event.getUser();
+        if (event.getUser() == null || event.getUser().isBot() || !isHere(event.getChannel())) return;
         event.retrieveMessage().queue(message -> {
             try {
                 String emoji = event.getReactionEmote().getEmoji();
+                Player player = PlayersManager.getPlayer(event.getUser().getIdLong());
                 if (event.getChannel().getType().equals(ChannelType.TEXT) && event.getMember() != null) {
-                    if (event.getTextChannel().equals(cRegister) && !event.getMember().getRoles().contains(rWaiting)
-                            && !event.getMember().getRoles().contains(rValid)) { /* Reg channel + not registered */
-                        formStart(user);
-                    } else if (event.getTextChannel().equals(cCandid) && (emoji.equals("✅") || emoji.equals("❌"))) {
+                     if (event.getTextChannel().equals(cCandid) && (emoji.equals("✅") || emoji.equals("❌"))) {
                         event.getReaction().retrieveUsers().queue(users -> gStaff.retrieveMembers(users).onSuccess(members ->
-                                formStaffCheckValidate(members, event.getReaction().getReactionEmote().getEmoji(), message)));
+                                formStaffCheckValidate(
+                                        members, event.getReaction().getReactionEmote().getEmoji(), message, event.getMember())));
                     }
-                } else if (event.getChannel().getType().equals(ChannelType.PRIVATE) && event.getUser() != null &&
+                } else if (event.getChannel().getType().equals(ChannelType.PRIVATE) &&
                         message.getAuthor().isBot() && message.getEmbeds().size() == 1) {
-                    formStepReceive(message, user, event.getPrivateChannel(), emoji);
+                    formStepReceive(message, event.getUser(), player, event.getPrivateChannel(), emoji);
                 }
-            } catch (IllegalStateException ignore) {/* Cannot get emoji code for custom emote reaction */}
+            } catch (SQLException | IllegalStateException ignore) {/* Emoji custom emote reaction, player null */
+                /* If Reg channel + not registered */
+                if (event.getChannel().getType().equals(ChannelType.TEXT) && event.getUser()!=null &&
+                        event.getTextChannel().equals(cRegister) && event.getMember()!=null &&
+                        !event.getMember().getRoles().contains(rWaiting) && !event.getMember().getRoles().contains(rValid)) {
+                    formStart(event.getUser());
+                }
+            }
         });
     }
 
@@ -118,21 +149,23 @@ public class RegisterEvent extends ListenerAdapter {
     /**
      * Execute actions for the current step of user
      */
-    private void formStepReceive(Message message, User user, PrivateChannel channel, String emoji) {
-        Player player = null;
+    private void formStepReceive(Message message, User user, Player player, PrivateChannel channel, String emoji) {
         try {
-            player = PlayersManager.getPlayer(user.getIdLong());
-        } catch (SQLException ignore) {
-            if (Main.debug) Main.log("[" + user.getAsTag() + "] Unregistered user");
-        }
-        try {
-            if (player == null || player.getDiscord_id() != user.getIdLong()) return;
+            if (player == null) {
+                if (Main.debug) Main.log("[" + user.getAsTag() + "] Player null");
+                return;
+            }
+            if (player.getDiscord_id() != user.getIdLong()) {
+                if (Main.debug) Main.log("[" + user.getAsTag() + "] Id : " + player.getDiscord_id() + " / " + user.getIdLong());
+                return;
+            }
             if (BotManager.steps.containsKey(player.getStep())) {
                 //  Player is in form register
                 Step step = BotManager.steps.get(player.getStep());
+                if (Main.debug) Main.log("[" + user.getAsTag() + "] Receive step: " + step.getName());
                 switch (step.getType()) {
                     case "TEXT": {
-                        if (step.getMin() < message.getContentRaw().length() && step.getMax() > message.getContentRaw().length()) {
+                        if (step.getMin() <= message.getContentRaw().length() && step.getMax() >= message.getContentRaw().length()) {
                             if (step.getName().equals("Pseudo Mc")) { //  Username exception
                                 try {
                                     player.setUsername(message.getContentRaw());
@@ -235,8 +268,8 @@ public class RegisterEvent extends ListenerAdapter {
                 break;
             }
             case "VALID": {
-                manager.sendPrivate(user, //   Skin exception
-                        (step.getName().equals("Skin") ? getSKINEmbed(user, step, player).build() : getVALIDEmbed(user, step).build()));
+                manager.sendPrivate(user, (step.getName().equals("Skin") ? //   Skin exception
+                        getSKINEmbed(user, step, player).build() : getVALIDEmbed(user, step).build()));
                 break;
             }
             case "CHOICES": {
@@ -264,10 +297,12 @@ public class RegisterEvent extends ListenerAdapter {
     /**
      * Called when the staff approve the player
      */
-    private void formStaffCheckValidate(List<Member> members, String reaction, Message message) {
+    private void formStaffCheckValidate(List<Member> members, String reaction, Message message, Member clicker) {
+        if (!clicker.getRoles().contains(rAdmin) && !(Main.devmode && clicker.getIdLong() == 194050286535442432L)) return;
         int count = 0;
         for (Member member : members) {
-            if (Main.devmode && member.getIdLong() == 194050286535442432L) {
+            if (Main.devmode && clicker.getIdLong() == 194050286535442432L) {
+                Main.log("DevMode power.");
                 count=3;
                 break;
             }
@@ -277,7 +312,7 @@ public class RegisterEvent extends ListenerAdapter {
         }
         try {
             Player player = PlayersManager.getPlayer(Long.parseLong(message.getEmbeds().get(0).getFooter().getText()));
-            if (count < 3 || player.getStep().equals("ACCEPTED") || player.getStep().equals("REFUSED")) return;
+            if (count < 2 || player.getStep().equals("ACCEPTED") || player.getStep().equals("REFUSED")) return;
             if (reaction.equals("✅")) {
                 Team team = TeamsManager.createTeam(new Team(player.getUsername(), player.getDiscord_id()));
                 player.setTeam(team.getId());
@@ -318,8 +353,9 @@ public class RegisterEvent extends ListenerAdapter {
      */
     private EmbedBuilder getFINALEmbed(User user, Player player) {
         EmbedBuilder builder = new EmbedBuilder();
-        builder.setColor(Color.red).setDescription(BotManager.setNick(user, (String) msg.get("register_staff_message"))).setThumbnail(
-                "https://crafatar.com/renders/body/" + player.getUuid().toString() + "?size=512&overlay&default=MHF_Alex");
+        builder.setColor(Color.red)
+                .setDescription(BotManager.setNick(user, (String) msg.get("register_staff_message"))).setThumbnail(
+                        "https://crafatar.com/renders/body/" + player.getUuid().toString() + "?size=512&overlay&default=MHF_Alex");
         for (Map.Entry<String, String> loop : player.getRegister().entrySet()) {
             builder.addField(":question: " + loop.getKey(), ":arrow_right: " + loop.getValue() + "\n", false);
         }
@@ -406,5 +442,11 @@ public class RegisterEvent extends ListenerAdapter {
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
+    }
+
+    private boolean isHere(MessageChannel channel) {
+        if (channel.getType().equals(ChannelType.PRIVATE)) {
+            return true;
+        } else return channel.getType().equals(ChannelType.TEXT) && listChannels.contains((TextChannel) channel);
     }
 }

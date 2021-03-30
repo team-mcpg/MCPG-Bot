@@ -88,7 +88,6 @@ public class PlayersManager {
      */
     private static Player getFromSQL(PreparedStatement q) throws SQLException {
         return new Player(q.getResultSet().getString("username"),
-                q.getResultSet().getString("prefix"),
                 q.getResultSet().getString("uuid")!=null ? UUID.fromString(q.getResultSet().getString("uuid")) : null,
                 q.getResultSet().getLong("discord_id"),
                 q.getResultSet().getString("step"),

@@ -14,10 +14,12 @@ public class DebugEvent extends ListenerAdapter {
     /* Public Channels */
     private final TextChannel cRegister;
     private final TextChannel cTeamSearch;
+    private final TextChannel cCandid;
 
     public DebugEvent(JDA api, JSONObject id) {
         this.cRegister = api.getTextChannelById((Long) id.get("cRegister"));
         this.cTeamSearch = api.getTextChannelById((Long) id.get("cTeamSearch"));
+        this.cCandid = api.getTextChannelById((Long) id.get("cCandid"));
     }
 
     @Override
@@ -36,7 +38,8 @@ public class DebugEvent extends ListenerAdapter {
         if (event.getUser() == null || event.getUser().isBot()) return;
         if (event.getChannel().getType().equals(ChannelType.PRIVATE)) {
             if (Main.debug) Main.log("[" + event.getUser().getAsTag() + "] Private reaction: " + event.getReactionEmote().getEmoji());
-        } else if (event.getTextChannel().equals(cRegister) || event.getTextChannel().equals(cTeamSearch)) {
+        } else if (event.getTextChannel().equals(cRegister) || event.getTextChannel().equals(cTeamSearch) ||
+                event.getTextChannel().equals(cCandid)) {
             if (Main.debug) Main.log("[" + event.getUser().getAsTag() + "] Add reaction: " + event.getReactionEmote().getEmoji() +
                     " in: " + event.getChannel().getName());
         }
