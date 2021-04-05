@@ -12,7 +12,7 @@ public class JedisPub {
         new Thread(() -> {
             try {
                 JSONObject redisConfig = (JSONObject) Main.getConfig().get("redis");
-                JSONObject redisChannels = (JSONObject) ((JSONObject) redisConfig.get("in-channels")).get("mc");
+                JSONObject redisChannels = (JSONObject) ((JSONObject) redisConfig.get("out-channels")).get("mc");
                 Jedis jedis = new Jedis((String) redisConfig.get("host"), 6379, 0);
                 jedis.auth((String) redisConfig.get("auth"));
                 jedis.publish((String) redisChannels.get("chat"), msg);
@@ -30,7 +30,7 @@ public class JedisPub {
         new Thread(() -> {
             try {
                 JSONObject redisConfig = (JSONObject) Main.getConfig().get("redis");
-                JSONObject redisChannels = (JSONObject) ((JSONObject) redisConfig.get("in-channels")).get("mc");
+                JSONObject redisChannels = (JSONObject) ((JSONObject) redisConfig.get("out-channels")).get("mc");
                 Jedis jedis = new Jedis((String) redisConfig.get("host"), 6379, 0);
                 jedis.auth((String) redisConfig.get("auth"));
                 jedis.publish((String) redisChannels.get("log"), msg);

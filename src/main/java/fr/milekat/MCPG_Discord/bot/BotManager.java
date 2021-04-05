@@ -28,6 +28,7 @@ public class BotManager {
         api.addEventListener(new DebugEvent(api, id));
         api.addEventListener(new RegisterEvent(this, api, id, msg));
         api.addEventListener(new TeamEvent(this, api, id, msg));
+        api.addEventListener(new McChat(api, id));
         //api.addEventListener(new Chat(this, api, id, msg));
         //api.addEventListener(new Ban(this, api, id, msg));
         steps = StepManager.getSteps((JSONArray) Main.getConfig().get("register_steps"));

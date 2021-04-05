@@ -137,6 +137,12 @@
         "chat" : "",
         "log" : ""
       }
+    },
+    "out-channels": {
+      "mc" : {
+        "chat" : "",
+        "log" : ""
+      }
     }
   }
 }

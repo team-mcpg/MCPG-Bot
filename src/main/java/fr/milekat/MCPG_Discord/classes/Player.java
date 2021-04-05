@@ -113,6 +113,10 @@ public class Player {
         this.muted = muted;
     }
 
+    public boolean isMute() {
+        return this.muted!=null;
+    }
+
     public Date getBanned() {
         return banned;
     }
