@@ -7,24 +7,28 @@ import fr.milekat.MCPG_Discord.utils.MariaManage;
 import fr.milekat.MCPG_Discord.utils.WriteLog;
 import net.dv8tion.jda.api.JDA;
 import org.json.simple.JSONObject;
-import redis.clients.jedis.Jedis;
 
 import java.sql.Connection;
+import java.util.Date;
 
 public class Main {
     /* Core */
     private static WriteLog logs;
-    public static boolean debug = false;
-    public static boolean devmode = false;
+    public static boolean DEBUG_ERROR = false;
+    public static boolean MODE_DEV = false;
     private static JSONObject configs;
     /* SQL */
     private static MariaManage mariaManage;
     /* Jedis */
-    public static boolean debugJedis = true;
-    public static Jedis jedis;
+    public static boolean DEBUG_JEDIS = true;
     /* Discord Bot */
     private static JDA jda;
     private static BotManager bot;
+    /* Dates */
+    public static Date DATE_MAINTENANCE = new Date();
+    public static Date DATE_MAINTENANCE_OFF = new Date();
+    public static Date DATE_OPEN = new Date();
+    public static Date DATE_BAN = new Date();
 
     /**
      * Main method
@@ -34,18 +38,19 @@ public class Main {
         log("Starting application..");
         Init init = new Init();
         configs = init.getConfigs();
-        //  Load SQL + Lancement du ping
+        //  Load SQL + Lancement du ping + DATES
         mariaManage = init.setSQL();
+        init.loadDates();
         //  Load Jedis + Sub Thread
-        jedis = init.getJedis();
+        init.getJedis();
         //  Discord bot load
         jda = init.getJDA();
         bot = new BotManager();
         //  Console load
         init.getConsole().start();
         //  Log
-        if (debug) log("Debugs enable");
-        if (devmode) log("Mode dev enable");
+        if (DEBUG_ERROR) log("Debugs enable");
+        if (MODE_DEV) log("Mode dev enable");
         log("Application ready.");
     }
 
@@ -57,15 +62,6 @@ public class Main {
     public static void log(String log) {
         System.out.println("[" + DateMilekat.setDateNow() + "] " + log);
         logs.logger("[" + DateMilekat.setDateNow() + "] " + log);
-    }
-
-    /**
-     * Send a message through Redis MessengerQueue
-     *
-     * @param msg message to send
-     */
-    public static void sendRedis(String msg) {
-        Main.jedis.publish("discord", msg);
     }
 
     /**

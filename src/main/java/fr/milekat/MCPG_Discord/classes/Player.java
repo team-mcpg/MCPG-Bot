@@ -1,5 +1,6 @@
 package fr.milekat.MCPG_Discord.classes;
 
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -16,8 +17,8 @@ public class Player {
     //  Team ID
     private int team;
     /* Bans / Mutes */
-    private String muted;
-    private String banned;
+    private Date muted;
+    private Date banned;
     private String reason;
 
     /**
@@ -31,7 +32,7 @@ public class Player {
     /**
      * For users from SQL
      */
-    public Player(String username, UUID uuid, long discord_id, String step, String register , int team, String muted, String banned, String reason) {
+    public Player(String username, UUID uuid, long discord_id, String step, String register , int team, Date muted, Date banned, String reason) {
         this.username = username;
         this.uuid = uuid;
         this.discord_id = discord_id;
@@ -104,19 +105,19 @@ public class Player {
         this.team = team;
     }
 
-    public String getMuted() {
+    public Date getMuted() {
         return muted;
     }
 
-    public void setMuted(String muted) {
+    public void setMuted(Date muted) {
         this.muted = muted;
     }
 
-    public String getBanned() {
+    public Date getBanned() {
         return banned;
     }
 
-    public void setBanned(String banned) {
+    public void setBanned(Date banned) {
         this.banned = banned;
     }
 

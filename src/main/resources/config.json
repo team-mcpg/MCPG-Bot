@@ -7,17 +7,22 @@
   "id" : {
     "gStaff" : 0,
     "gPublic" : 0,
+    "ccBan" : 0,
     "rWaiting" : 0,
     "rValid" : 0,
     "rTeam" : 0,
     "rAdmin" : 0,
+    "rMute" : 0,
+    "rBan" : 0,
     "cRegister" : 0,
     "mRegister" : 0,
     "cCandid" : 0,
     "cAccept" : 0,
     "cDeny" : 0,
     "cTeamSearch" : 0,
-    "rValidation" : 0
+    "cChat" : 0,
+    "cChatFake" : 0,
+    "cLog" : 0
   },
   "messages" : {
     "_tips": "Faire un \n pour sauter une ligne !",
@@ -126,6 +131,12 @@
     "this_channel" : "discord",
     "debug" : true,
     "host": "",
-    "auth": ""
+    "auth": "",
+    "in-channels": {
+      "mc" : {
+        "chat" : "",
+        "log" : ""
+      }
+    }
   }
 }

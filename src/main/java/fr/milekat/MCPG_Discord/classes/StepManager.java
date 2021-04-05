@@ -16,7 +16,7 @@ public class StepManager {
         for (Object node : configStep) {
             JSONObject jsonObject = (JSONObject) node;
             if (((String) jsonObject.get("name")).contains("__")) continue;
-            if (Main.debug) Main.log("Load step: " + jsonObject.get("name"));
+            if (Main.DEBUG_ERROR) Main.log("Load step: " + jsonObject.get("name"));
             Step step = new Step();
             switch ((String) jsonObject.get("type")) {
                 case "INIT": {

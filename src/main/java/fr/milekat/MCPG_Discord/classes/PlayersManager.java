@@ -5,7 +5,9 @@ import fr.milekat.MCPG_Discord.Main;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.UUID;
 
 public class PlayersManager {
@@ -76,8 +78,8 @@ public class PlayersManager {
         q.setString(6, player.getStep());
         q.setString(7, player.getStringRegister());
         q.setInt(8, player.getTeam());
-        q.setString(9, player.getMuted());
-        q.setString(10, player.getBanned());
+        q.setTimestamp(9, player.getMuted()==null ? null : new Timestamp(player.getMuted().getTime()));
+        q.setTimestamp(10, player.getBanned()==null ? null : new Timestamp(player.getBanned().getTime()));
         q.setString(11, player.getReason());
         q.execute();
         q.close();
@@ -93,8 +95,10 @@ public class PlayersManager {
                 q.getResultSet().getString("step"),
                 q.getResultSet().getString("register"),
                 q.getResultSet().getInt("team_id"),
-                q.getResultSet().getString("muted"),
-                q.getResultSet().getString("banned"),
+                q.getResultSet().getTimestamp("muted")==null ? null :
+                        new Date(q.getResultSet().getTimestamp("muted").getTime()),
+                q.getResultSet().getTimestamp("banned")==null ? null :
+                        new Date(q.getResultSet().getTimestamp("banned").getTime()),
                 q.getResultSet().getString("reason"));
     }
 }

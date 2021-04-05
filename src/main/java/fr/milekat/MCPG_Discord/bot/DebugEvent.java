@@ -26,9 +26,9 @@ public class DebugEvent extends ListenerAdapter {
     public void onMessageReceived(@NotNull MessageReceivedEvent event) {
         if (event.getAuthor().isBot()) return;
         if (event.getChannel().getType().equals(ChannelType.PRIVATE)) {
-            if (Main.debug) Main.log("[" + event.getAuthor().getAsTag() + "] Private msg: " + event.getMessage().getContentRaw());
+            if (Main.DEBUG_ERROR) Main.log("[" + event.getAuthor().getAsTag() + "] Private msg: " + event.getMessage().getContentRaw());
         } else if (event.getTextChannel().equals(cRegister) || event.getTextChannel().equals(cTeamSearch)) {
-            if (Main.debug) Main.log("[" + event.getAuthor().getAsTag() + "] Send msg: " + event.getMessage().getContentRaw() +
+            if (Main.DEBUG_ERROR) Main.log("[" + event.getAuthor().getAsTag() + "] Send msg: " + event.getMessage().getContentRaw() +
                     " in: " + event.getChannel().getName());
         }
     }
@@ -37,10 +37,10 @@ public class DebugEvent extends ListenerAdapter {
     public void onMessageReactionAdd(@NotNull MessageReactionAddEvent event) {
         if (event.getUser() == null || event.getUser().isBot()) return;
         if (event.getChannel().getType().equals(ChannelType.PRIVATE)) {
-            if (Main.debug) Main.log("[" + event.getUser().getAsTag() + "] Private reaction: " + event.getReactionEmote().getEmoji());
+            if (Main.DEBUG_ERROR) Main.log("[" + event.getUser().getAsTag() + "] Private reaction: " + event.getReactionEmote().getEmoji());
         } else if (event.getTextChannel().equals(cRegister) || event.getTextChannel().equals(cTeamSearch) ||
                 event.getTextChannel().equals(cCandid)) {
-            if (Main.debug) Main.log("[" + event.getUser().getAsTag() + "] Add reaction: " + event.getReactionEmote().getEmoji() +
+            if (Main.DEBUG_ERROR) Main.log("[" + event.getUser().getAsTag() + "] Add reaction: " + event.getReactionEmote().getEmoji() +
                     " in: " + event.getChannel().getName());
         }
     }

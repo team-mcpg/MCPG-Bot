@@ -23,16 +23,38 @@ public class DateMilekat {
         return df.format(new Date());
     }
 
-    public static String setDatesysNow() {
+    public static String setDateSysNow() {
         return dfsys.format(new Date());
     }
 
-    public static String setDate(Date date) {
+    public static String getDate(Date date) {
         return df.format(date);
     }
 
     public static Date getDate(String date) throws ParseException {
         return df.parse(date);
+    }
+
+    /**
+     *      Envoie le temps entre restant avant Date !
+     * @param date joueur
+     */
+    public static String reamingToString(Date date) {
+        HashMap<String, String> reamingMute = DateMilekat.getReamingTime(date, new Date());
+        String time = "";
+        if (!reamingMute.get("D").equals("0")) {
+            time = reamingMute.get("D") + "jours ";
+        }
+        if (!reamingMute.get("h").equals("0")) {
+            time = time + reamingMute.get("h") + "h ";
+        }
+        if (!reamingMute.get("m").equals("0")) {
+            time = time + reamingMute.get("m") + "m ";
+        }
+        if (!reamingMute.get("s").equals("0")) {
+            time = time + reamingMute.get("s") + "s ";
+        }
+        return Tools.remLastChar(time);
     }
 
     /**

@@ -31,7 +31,7 @@ public class BotManager {
         //api.addEventListener(new Chat(this, api, id, msg));
         //api.addEventListener(new Ban(this, api, id, msg));
         steps = StepManager.getSteps((JSONArray) Main.getConfig().get("register_steps"));
-        if (Main.debug) Main.log("Load du bot terminé.");
+        if (Main.DEBUG_ERROR) Main.log("Load du bot terminé.");
     }
 
     /**
@@ -99,7 +99,7 @@ public class BotManager {
             steps = StepManager.getSteps((JSONArray) ((JSONObject) jsonParser.parse(config)).get("register_steps"));
         } catch (IOException | ParseException exception) {
             Main.log("config.json not found");
-            if (Main.debug) exception.printStackTrace();
+            if (Main.DEBUG_ERROR) exception.printStackTrace();
         }
     }
 
@@ -112,7 +112,7 @@ public class BotManager {
             id = (JSONObject) ((JSONObject) jsonParser.parse(new FileReader("config.json"))).get("id");
         } catch (IOException | ParseException exception) {
             Main.log("config.json not found");
-            if (Main.debug) exception.printStackTrace();
+            if (Main.DEBUG_ERROR) exception.printStackTrace();
         }
     }
 }

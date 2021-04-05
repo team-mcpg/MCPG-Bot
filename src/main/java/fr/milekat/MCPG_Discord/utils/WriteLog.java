@@ -11,7 +11,7 @@ public class WriteLog {
     public WriteLog() throws IOException {
         File file = new File("logs.txt");
         if (!file.createNewFile()) {
-            Files.move(Paths.get("logs.txt"), Paths.get("logs/logs_" + DateMilekat.setDatesysNow() + ".txt"));
+            Files.move(Paths.get("logs.txt"), Paths.get("logs/logs_" + DateMilekat.setDateSysNow() + ".txt"));
             file.createNewFile();
         }
     }

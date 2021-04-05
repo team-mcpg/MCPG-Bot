@@ -28,6 +28,8 @@ public class TeamEvent extends ListenerAdapter {
     /* Roles */
     private final Role rValid;
     private final Role rTeam;
+    /* Public Channels */
+    private final TextChannel cTeamSearch;
 
     public TeamEvent(BotManager manager, JDA api, JSONObject id, JSONObject msg) {
         this.manager = manager;
@@ -36,6 +38,7 @@ public class TeamEvent extends ListenerAdapter {
         this.gPublic = api.getGuildById((Long) id.get("gPublic"));
         this.rValid = api.getRoleById((Long) id.get("rValid"));
         this.rTeam = api.getRoleById((Long) id.get("rTeam"));
+        this.cTeamSearch = api.getTextChannelById((Long) id.get("cTeamSearch"));
     }
 
     @Override
@@ -44,7 +47,8 @@ public class TeamEvent extends ListenerAdapter {
         try {
             Player player = PlayersManager.getPlayer(event.getAuthor().getIdLong());
             if (event.getMember() != null && event.getMember().getRoles().contains(rValid) &&
-                    event.getMessage().getMentionedMembers().size() == 1) {
+                    event.getChannel().getType().equals(ChannelType.TEXT) &&
+                    event.getTextChannel().equals(cTeamSearch) && event.getMessage().getMentionedMembers().size() == 1) {
                 if (event.getMessage().getContentRaw().startsWith("/info")) {
                     checkPlayerTeam(event.getMessage(), event.getMember());
                 } else if (event.getMessage().getContentRaw().startsWith("/invite")) {
@@ -53,6 +57,7 @@ public class TeamEvent extends ListenerAdapter {
                 event.getMessage().delete().queue();
             } else if (player.getStep().equals("ACCEPTED") && event.getMessage().getContentRaw().startsWith("/teamname")) {
                 updateTeamName(event.getAuthor(), event.getMessage().getContentRaw());
+                event.getMessage().delete().queue();
             }
         } catch (SQLException ignore) {}
     }
@@ -84,7 +89,7 @@ public class TeamEvent extends ListenerAdapter {
                 manager.sendPrivate(member.getUser(), TeamsManager.getTeamEmbed(team).build());
             } catch (SQLException throwables) {
                 manager.sendPrivate(member.getUser(), (String) msg.get("data_error"));
-                if (Main.debug) {
+                if (Main.DEBUG_ERROR) {
                     Main.log("[" + member.getUser().getAsTag() + "] SQL error");
                     throwables.printStackTrace();
                 }
@@ -121,7 +126,7 @@ public class TeamEvent extends ListenerAdapter {
             senderTeam = TeamsManager.getPlayerTeam(sender.getUsername());
         } catch (SQLException throwables) {
             manager.sendPrivate(member.getUser(), (String) msg.get("data_error"));
-            if (Main.debug) throwables.printStackTrace();
+            if (Main.DEBUG_ERROR) throwables.printStackTrace();
             return;
         }
         //  Max team size, cancel request
@@ -190,12 +195,12 @@ public class TeamEvent extends ListenerAdapter {
                             ((String) msg.get("request_reply_confirm")).replaceAll("<team_name>", team.getName()));
                 } catch (SQLException throwables) {
                     manager.sendPrivate(uTarget, (String) msg.get("data_error"));
-                    if (Main.debug) throwables.printStackTrace();
+                    if (Main.DEBUG_ERROR) throwables.printStackTrace();
                 }
             }));
         } catch (SQLException throwables) {
             manager.sendPrivate(uTarget, (String) msg.get("data_error"));
-            if (Main.debug) throwables.printStackTrace();
+            if (Main.DEBUG_ERROR) throwables.printStackTrace();
         }
     }
 
@@ -216,9 +221,9 @@ public class TeamEvent extends ListenerAdapter {
                             ((String) msg.get("team_renamed")).replaceAll("<team_name>", team.getName())).queue());
                 }
             }
-        } catch (SQLException throwables) {
+        } catch (SQLException throwable) {
             manager.sendPrivate(user, (String) msg.get("data_error"));
-            if (Main.debug) throwables.printStackTrace();
+            if (Main.DEBUG_ERROR) throwable.printStackTrace();
         }
     }
 }

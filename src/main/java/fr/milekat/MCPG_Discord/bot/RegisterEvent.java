@@ -81,7 +81,9 @@ public class RegisterEvent extends ListenerAdapter {
                         gPublic.addRoleToMember(event.getMember(), rTeam).queue();
                     }
                 }
-                gPublic.modifyNickname(event.getMember(), player.getUsername()).queue();
+                if (gPublic.getSelfMember().canInteract(event.getMember())) {
+                    gPublic.modifyNickname(event.getMember(), player.getUsername()).queue();
+                }
             } catch (SQLException ignore) {}
         }
     }
@@ -139,7 +141,7 @@ public class RegisterEvent extends ListenerAdapter {
             user.openPrivateChannel().queue(channel -> formStepSend(user, player, channel));
         } catch (SQLException throwables) {
             manager.sendPrivate(user, (String) msg.get("data_error"));
-            if (Main.debug) {
+            if (Main.DEBUG_ERROR) {
                 Main.log("[" + user.getAsTag() + "] SQL error");
                 throwables.printStackTrace();
             }
@@ -152,17 +154,17 @@ public class RegisterEvent extends ListenerAdapter {
     private void formStepReceive(Message message, User user, Player player, PrivateChannel channel, String emoji) {
         try {
             if (player == null) {
-                if (Main.debug) Main.log("[" + user.getAsTag() + "] Player null");
+                if (Main.DEBUG_ERROR) Main.log("[" + user.getAsTag() + "] Player null");
                 return;
             }
             if (player.getDiscord_id() != user.getIdLong()) {
-                if (Main.debug) Main.log("[" + user.getAsTag() + "] Id : " + player.getDiscord_id() + " / " + user.getIdLong());
+                if (Main.DEBUG_ERROR) Main.log("[" + user.getAsTag() + "] Id : " + player.getDiscord_id() + " / " + user.getIdLong());
                 return;
             }
             if (BotManager.steps.containsKey(player.getStep())) {
                 //  Player is in form register
                 Step step = BotManager.steps.get(player.getStep());
-                if (Main.debug) Main.log("[" + user.getAsTag() + "] Receive step: " + step.getName());
+                if (Main.DEBUG_ERROR) Main.log("[" + user.getAsTag() + "] Receive step: " + step.getName());
                 switch (step.getType()) {
                     case "TEXT": {
                         if (step.getMin() <= message.getContentRaw().length() && step.getMax() >= message.getContentRaw().length()) {
@@ -172,7 +174,7 @@ public class RegisterEvent extends ListenerAdapter {
                                     player.setUuid(UUID.fromString(MojangNames.getUuid(message.getContentRaw())));
                                 } catch (IOException ignored) {
                                     manager.sendPrivate(user, "Mojang data error please retry.");
-                                    if (Main.debug) Main.log("[" + user.getAsTag() + "] Mojang data error, retry..");
+                                    if (Main.DEBUG_ERROR) Main.log("[" + user.getAsTag() + "] Mojang data error, retry..");
                                     formStepSend(user, player, channel);
                                     return;
                                 }
@@ -245,7 +247,7 @@ public class RegisterEvent extends ListenerAdapter {
             }
         } catch (SQLException throwables) {
             manager.sendPrivate(user, (String) msg.get("data_error"));
-            if (Main.debug) {
+            if (Main.DEBUG_ERROR) {
                 Main.log("[" + user.getAsTag() + "] SQL error");
                 throwables.printStackTrace();
             }
@@ -257,11 +259,11 @@ public class RegisterEvent extends ListenerAdapter {
      */
     private void formStepSend(User user, Player player, PrivateChannel channel) {
         if (!BotManager.steps.containsKey(player.getStep())) {
-            if (Main.debug) Main.log("[" + user.getAsTag() + "] Unregister step: " + player.getStep());
+            if (Main.DEBUG_ERROR) Main.log("[" + user.getAsTag() + "] Unregister step: " + player.getStep());
             return;
         }
         Step step = BotManager.steps.get(player.getStep());
-        if (Main.debug) Main.log("[" + user.getAsTag() + "] Send step: " + step.getName());
+        if (Main.DEBUG_ERROR) Main.log("[" + user.getAsTag() + "] Send step: " + step.getName());
         switch (step.getType()) {
             case "TEXT": {
                 channel.sendMessage(getTEXTEmbed(user, step).build()).queue();
@@ -289,7 +291,7 @@ public class RegisterEvent extends ListenerAdapter {
                 break;
             }
             default: {
-                if (Main.debug) Main.log("Unknown step: " + step.getType());
+                if (Main.DEBUG_ERROR) Main.log("Unknown step: " + step.getType());
             }
         }
     }
@@ -298,10 +300,10 @@ public class RegisterEvent extends ListenerAdapter {
      * Called when the staff approve the player
      */
     private void formStaffCheckValidate(List<Member> members, String reaction, Message message, Member clicker) {
-        if (!clicker.getRoles().contains(rAdmin) && !(Main.devmode && clicker.getIdLong() == 194050286535442432L)) return;
+        if (!clicker.getRoles().contains(rAdmin) && !(Main.MODE_DEV && clicker.getIdLong() == 194050286535442432L)) return;
         int count = 0;
         for (Member member : members) {
-            if (Main.devmode && clicker.getIdLong() == 194050286535442432L) {
+            if (Main.MODE_DEV && clicker.getIdLong() == 194050286535442432L) {
                 Main.log("DevMode power.");
                 count=3;
                 break;
@@ -330,7 +332,7 @@ public class RegisterEvent extends ListenerAdapter {
                     gPublic.removeRoleFromMember(member, rWaiting).queue();
                 });
                 cAccept.sendMessage(message).queue();
-                if (Main.debug) Main.log("[" + player.getUsername() + "] Candidature acceptée.");
+                if (Main.DEBUG_ERROR) Main.log("[" + player.getUsername() + "] Candidature acceptée.");
             } else if (reaction.equals("❌")) {
                 player.setStep("REFUSED");
                 PlayersManager.updatePlayer(player);
@@ -339,12 +341,12 @@ public class RegisterEvent extends ListenerAdapter {
                     channel.close().queue();
                 });
                 cDeny.sendMessage(message).queue();
-                if (Main.debug) Main.log("[" + player.getUsername() + "] Candidature refusée.");
+                if (Main.DEBUG_ERROR) Main.log("[" + player.getUsername() + "] Candidature refusée.");
             }
             message.delete().queue();
         } catch (NullPointerException | SQLException throwables) {
             cCandid.sendMessage((String) msg.get("data_error")).queue();
-            if (Main.debug) throwables.printStackTrace();
+            if (Main.DEBUG_ERROR) throwables.printStackTrace();
         }
     }
 

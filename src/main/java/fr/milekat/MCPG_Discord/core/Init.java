@@ -20,6 +20,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -30,9 +31,9 @@ public class Init {
     public JSONObject getConfigs() throws IOException, ParseException {
         JSONParser jsonParser = new JSONParser();
         JSONObject configs = (JSONObject) jsonParser.parse(new FileReader("config.json"));
-        Main.debug = (boolean) configs.get("debug");
-        Main.debugJedis = (boolean) configs.get("debugjedis");
-        Main.devmode = (boolean) configs.get("devmode");
+        Main.DEBUG_ERROR = (boolean) configs.get("debug");
+        Main.DEBUG_JEDIS = (boolean) configs.get("debugjedis");
+        Main.MODE_DEV = (boolean) configs.get("devmode");
         return configs;
     }
 
@@ -85,27 +86,25 @@ public class Init {
     /**
      * Connect to Redis server and subscribe to all servers
      */
-    public Jedis getJedis() {
-        JSONObject redisconfig = (JSONObject) Main.getConfig().get("redis");
-        Main.debugJedis = (boolean) redisconfig.get("debug");
-        Jedis jedis = new Jedis((String) redisconfig.get("host"), 6379, 0);
-        jedis.auth((String) redisconfig.get("auth"));
+    public void getJedis() {
+        JSONObject redisConfig = (JSONObject) Main.getConfig().get("redis");
+        Main.DEBUG_JEDIS = (boolean) redisConfig.get("debug");
+        if (Main.DEBUG_JEDIS) Main.log("Debug jedis activé");
+        Jedis jedis = new Jedis((String) redisConfig.get("host"), 6379, 0);
+        jedis.auth((String) redisConfig.get("auth"));
         JedisSub subscriber = new JedisSub();
         new Thread("Redis-Discord-Sub") {
             @Override
             public void run() {
                 try {
-                    Jedis jedis = new Jedis((String) redisconfig.get("host"), 6379, 0);
-                    jedis.auth((String) redisconfig.get("auth"));
-                    if (Main.debugJedis) Main.log("Load Jedis channels");
+                    if (Main.DEBUG_JEDIS) Main.log("Load Jedis channels");
                     jedis.subscribe(subscriber, getJedisChannels());
-                } catch (Exception e) {
-                    Main.log("Subscribing failed." + e);
-                    e.printStackTrace();
+                } catch (Exception throwable) {
+                    Main.log("Subscribing failed." + throwable);
+                    throwable.printStackTrace();
                 }
             }
-        };
-        return jedis;
+        }.start();
     }
 
     /**
@@ -128,14 +127,33 @@ public class Init {
     private String[] getJedisChannels() {
         try {
             Connection connection = Main.getSql();
-            PreparedStatement q = connection.prepareStatement("SELECT * FROM `mcpg_redis_channels`;");
+            PreparedStatement q = connection.prepareStatement("SELECT * FROM `mcpg_redis_channels`");
             q.execute();
             ArrayList<String> jedisChannels = new ArrayList<>();
-            while (q.getResultSet().next()) jedisChannels.add(q.getResultSet().getString("channel"));
+            while (q.getResultSet().next()) { jedisChannels.add(q.getResultSet().getString("channel")); }
+            q.close();
             return jedisChannels.toArray(new String[0]);
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
+        } catch (SQLException throwable) {
+            throwable.printStackTrace();
         }
         return null;
+    }
+
+    /**
+     * Load all dates settings such as Maintenance, Open date..
+     */
+    public void loadDates() {
+        try {
+            Connection connection = Main.getSql();
+            PreparedStatement q = connection.prepareStatement("SELECT * FROM `mcpg_dates`;");
+            q.execute();
+            while (q.getResultSet().next()) {
+                Main.class.getDeclaredField(q.getResultSet().getString("name")).set(new Date(),
+                        new Date(q.getResultSet().getTimestamp("value").getTime()));
+            }
+            q.close();
+        } catch (SQLException | NoSuchFieldException | IllegalAccessException throwable) {
+            throwable.printStackTrace();
+        }
     }
 }

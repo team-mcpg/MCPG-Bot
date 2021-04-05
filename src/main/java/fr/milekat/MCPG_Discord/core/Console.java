@@ -55,15 +55,15 @@ public class Console {
      * Passe en mode debug (throwable Java)
      */
     private void debug() {
-        Main.debug = !Main.debug;
-        Main.log("Mode debug: " + Main.debug + ".");
+        Main.DEBUG_ERROR = !Main.DEBUG_ERROR;
+        Main.log("Mode debug: " + Main.DEBUG_ERROR + ".");
     }
 
     /**
      * Enable / disable dev mode !
      */
     private void devmode() {
-        Main.devmode = !Main.devmode;
-        Main.log("Mode dev: " + Main.devmode + ".");
+        Main.MODE_DEV = !Main.MODE_DEV;
+        Main.log("Mode dev: " + Main.MODE_DEV + ".");
     }
 }
